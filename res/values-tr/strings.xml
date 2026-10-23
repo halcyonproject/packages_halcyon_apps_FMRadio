@@ -70,4 +70,5 @@
     <string name="accessibility_pause">Duraklat</string>
     <string name="accessibility_next">Sonraki</string>
     <string name="accessibility_prev">Önceki</string>
+    <string name="no_favorite_station">Henüz favori istasyon yok</string>
 </resources>

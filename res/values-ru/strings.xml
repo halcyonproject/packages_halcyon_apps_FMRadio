@@ -70,4 +70,5 @@
     <string name="accessibility_pause">Пауза</string>
     <string name="accessibility_next">След.</string>
     <string name="accessibility_prev">Предыдущий</string>
+    <string name="no_favorite_station">Пока нет любимых радиостанций</string>
 </resources>

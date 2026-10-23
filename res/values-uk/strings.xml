@@ -70,4 +70,5 @@
     <string name="accessibility_pause">Пауза</string>
     <string name="accessibility_next">Наступна</string>
     <string name="accessibility_prev">Попередня</string>
+    <string name="no_favorite_station">Поки немає улюблених станцій</string>
 </resources>

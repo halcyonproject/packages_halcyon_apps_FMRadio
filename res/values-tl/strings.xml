@@ -61,4 +61,13 @@
     <string name="toast_record_not_saved">Hindi na-save ang pagre-record</string>
     <string name="toast_listen">MAKINIG</string>
     <string name="toast_station_renamed">Napalitan ng pangalan ang istasyon</string>
+    <string name="no_favorite_station">Wala pang mga paboritong istasyon</string>
+    <string name="accessibility_play">I-play</string>
+    <string name="accessibility_pause">I-pause</string>
+    <string name="accessibility_next">Susunod</string>
+    <string name="accessibility_prev">Nakaraan</string>
+    <string name="audio_db_artist_name">Aking mga recording ng FM</string>
+    <string name="audio_db_album_name">Mga recording ng FM</string>
+    <string name="audio_db_playlist_name">Mga recording ng FM</string>
+    <string name="audio_save_dir_name">Mga recording ng FM</string>
 </resources>

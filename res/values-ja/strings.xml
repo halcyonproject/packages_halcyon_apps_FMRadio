@@ -70,4 +70,5 @@
     <string name="accessibility_pause">一時停止</string>
     <string name="accessibility_next">次へ</string>
     <string name="accessibility_prev">前へ</string>
+    <string name="no_favorite_station">お気に入りのラジオ局はまだありません</string>
 </resources>

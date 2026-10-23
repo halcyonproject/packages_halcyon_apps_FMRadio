@@ -70,4 +70,5 @@
     <string name="accessibility_pause">Tạm dừng</string>
     <string name="accessibility_next">Bài tiếp theo</string>
     <string name="accessibility_prev">Bài trước đó</string>
+    <string name="no_favorite_station">Chưa có đài ưa thích nào</string>
 </resources>

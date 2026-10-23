@@ -70,4 +70,5 @@
     <string name="accessibility_pause">일시정지</string>
     <string name="accessibility_next">다음</string>
     <string name="accessibility_prev">이전</string>
+    <string name="no_favorite_station">아직 즐겨찾는 방송국이 없습니다</string>
 </resources>

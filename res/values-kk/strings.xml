@@ -61,4 +61,13 @@
     <string name="toast_record_not_saved">Жазба сақталмады</string>
     <string name="toast_listen">ТЫҢДАУ</string>
     <string name="toast_station_renamed">Станция атауы өзгертілді</string>
+    <string name="no_favorite_station">Сүйікті станциялар әлі жоқ</string>
+    <string name="accessibility_play">Ойнату</string>
+    <string name="accessibility_pause">Кідірту</string>
+    <string name="accessibility_next">Келесі</string>
+    <string name="accessibility_prev">Алдыңғы</string>
+    <string name="audio_db_artist_name">Менің FM жазбаларым</string>
+    <string name="audio_db_album_name">FM жазбалары</string>
+    <string name="audio_db_playlist_name">FM жазбалары</string>
+    <string name="audio_save_dir_name">FM жазбалары</string>
 </resources>

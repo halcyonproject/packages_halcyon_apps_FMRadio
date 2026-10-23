@@ -61,4 +61,13 @@
     <string name="toast_record_not_saved">Rakaman tidak disimpan</string>
     <string name="toast_listen">DENGARKAN</string>
     <string name="toast_station_renamed">Stesen ini telah ditukar namanya</string>
+    <string name="no_favorite_station">Tiada stesen kegemaran lagi</string>
+    <string name="accessibility_play">Main</string>
+    <string name="accessibility_pause">Jeda</string>
+    <string name="accessibility_next">Seterusnya</string>
+    <string name="accessibility_prev">Sebelumnya</string>
+    <string name="audio_db_artist_name">Rakaman FM saya</string>
+    <string name="audio_db_album_name">Rakaman FM</string>
+    <string name="audio_db_playlist_name">Rakaman FM</string>
+    <string name="audio_save_dir_name">Rakaman FM</string>
 </resources>

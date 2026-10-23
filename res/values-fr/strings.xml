@@ -70,4 +70,5 @@
     <string name="accessibility_pause">Pause</string>
     <string name="accessibility_next">Suivant</string>
     <string name="accessibility_prev">Précédent</string>
+    <string name="no_favorite_station">Aucune station favorite pour le moment</string>
 </resources>

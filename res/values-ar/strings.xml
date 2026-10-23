@@ -70,4 +70,5 @@
     <string name="accessibility_pause">إيقاف مؤقت</string>
     <string name="accessibility_next">التالي</string>
     <string name="accessibility_prev">السابق</string>
+    <string name="no_favorite_station">لا توجد محطات مفضلة بعد</string>
 </resources>

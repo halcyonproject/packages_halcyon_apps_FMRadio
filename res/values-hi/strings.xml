@@ -66,4 +66,9 @@
     <string name="accessibility_pause">पॉज़ करें</string>
     <string name="accessibility_next">अगला</string>
     <string name="accessibility_prev">पिछला</string>
+    <string name="no_favorite_station">अभी कोई पसंदीदा स्टेशन नहीं है</string>
+    <string name="audio_db_artist_name">मेरी एफएम रिकॉर्डिंग</string>
+    <string name="audio_db_album_name">एफएम रिकॉर्डिंग</string>
+    <string name="audio_db_playlist_name">एफएम रिकॉर्डिंग</string>
+    <string name="audio_save_dir_name">एफएम रिकॉर्डिंग</string>
 </resources>
