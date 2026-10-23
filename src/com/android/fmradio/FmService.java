@@ -303,10 +303,12 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                 exitFm();
                 // screen on, if FM play, open rds
             } else if (Intent.ACTION_SCREEN_ON.equals(action)) {
+                switchLowPowerModeAsync(false);
                 setRdsAsync(true);
                 // screen off, if FM play, close rds
             } else if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                 setRdsAsync(false);
+                switchLowPowerModeAsync(true);
                 // switch antenna when headset plug in or plug out
             } else if (Intent.ACTION_HEADSET_PLUG.equals(action)) {
                 // switch antenna should not impact audio focus status
@@ -1065,6 +1067,20 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
     }
 
     /**
+     * Switch into low power mode
+     *
+     * @param on true, switch low power mode; false, switch to normal power mode.
+     */
+    private void switchLowPowerModeAsync(final boolean on) {
+        final Bundle bundle = new Bundle(1);
+        bundle.putBoolean(OPTION, on);
+        final Message msg = mFmServiceHandler.obtainMessage(FmListener.MSGID_SWITCH_LOW_POWER_MODE);
+        msg.setData(bundle);
+        mFmServiceHandler.removeMessages(FmListener.MSGID_SWITCH_LOW_POWER_MODE);
+        mFmServiceHandler.sendMessage(msg);
+    }
+
+    /**
      * Set RDS
      *
      * @param on true, enable RDS; false, disable RDS.
@@ -1443,6 +1459,14 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         return null;
     }
 
+    private static boolean isQualcommSoc() {
+        return !TextUtils.isEmpty(SystemProperties.get("vendor.qcom.bluetooth.soc"))
+                || "qcom".equalsIgnoreCase(SystemProperties.get("ro.soc.manufacturer"))
+                || "qualcomm".equalsIgnoreCase(SystemProperties.get("ro.soc.manufacturer"))
+                || SystemProperties.get("ro.board.platform", "").startsWith("q")
+                || SystemProperties.get("ro.hardware", "").startsWith("q");
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -1485,7 +1509,8 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         }
         Log.d(TAG, "onCreate, mIsSpeakerUsed = " + mIsSpeakerUsed);
 
-        mUseAudioSession = SystemProperties.getBoolean("ro.vendor.fm.use_audio_session", true);
+        boolean defaultAudioSession = !isQualcommSoc();
+        mUseAudioSession = SystemProperties.getBoolean("ro.vendor.fm.use_audio_session", defaultAudioSession);
         Log.d(TAG, "onCreate, mUseAudioSession = " + mUseAudioSession);
 
         registerFmBroadcastReceiver();
@@ -2815,6 +2840,15 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                 case FmListener.MSGID_SET_RDS_FINISHED:
                     bundle = msg.getData();
                     setRds(bundle.getBoolean(OPTION));
+                    break;
+
+                case FmListener.MSGID_SWITCH_LOW_POWER_MODE:
+                    bundle = msg.getData();
+                    if (bundle.getBoolean(OPTION)) {
+                        FmNative.setLowPowerMode();
+                    } else {
+                        FmNative.setNormalPowerMode();
+                    }
                     break;
 
                 case FmListener.MSGID_SET_MUTE_FINISHED:

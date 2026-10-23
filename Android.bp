@@ -24,8 +24,6 @@ android_app {
     platform_apis: true,
     privileged: true,
 
-    jni_libs: ["libmtkfmjni"],
-
     required: [
         "privapp_whitelist_com.android.fmradio_revamped.xml",
         "RevampedFmRecordingsProvider",

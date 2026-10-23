@@ -21,7 +21,15 @@ package com.android.fmradio;
  */
 public class FmNative {
     static {
-        System.loadLibrary("mtkfmjni");
+        try {
+            System.loadLibrary("mtkfmjni");
+        } catch (UnsatisfiedLinkError e1) {
+            try {
+                System.loadLibrary("qcomfmjni");
+            } catch (UnsatisfiedLinkError e2) {
+                System.loadLibrary("fmjni");
+            }
+        }
     }
 
     /**
@@ -152,15 +160,17 @@ public class FmNative {
      */
     static native int switchAntenna(int antenna);
 
-    // Method declarations for MTK libfmjni, needed for registerNativeMethods
-    static native int readRssi();
-    static native boolean stereoMono();
-    static native boolean setStereoMono(boolean b);
-    static native short readCapArray();
-    static native short readRdsBler();
-    static native short[] emcmd(short[] s);
-    static native boolean emsetth(int a, int b);
-    static native int[] getHardwareVersion();
-    static native boolean setDesenseChannel(float f, int a);
-    static native boolean setDesenseList(int a, float f);
+    /**
+     * Set the driver to low power mode.
+     *
+     * @return (true, success; false, failed)
+     */
+    static native boolean setLowPowerMode();
+
+    /**
+     * Set the driver to normal power mode.
+     *
+     * @return (true, success; false, failed)
+     */
+    static native boolean setNormalPowerMode();
 }
