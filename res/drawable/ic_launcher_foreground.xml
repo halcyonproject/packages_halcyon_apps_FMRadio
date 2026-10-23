@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+     SPDX-FileCopyrightText: 2026 Halcyon Project
+     SPDX-License-Identifier: Apache-2.0
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="31.08"
+        android:translateY="36.93"
+        android:scaleX="0.0075"
+        android:scaleY="0.0075">
+        <!-- Main Body -->
+        <path
+            android:fillColor="#94B8FF"
+            android:pathData="M5154,0C5683.64,0 6113,429.359 6113,959V3592C6113,4121.64 5683.64,4551 5154,4551H959C429.359,4551 0,4121.64 0,3592V959C0,429.359 429.359,0 959,0H5154ZM1062,364C673.744,364 359,678.744 359,1067V1572C359,1960.26 673.744,2275 1062,2275H5050C5438.26,2275 5753,1960.26 5753,1572V1067C5753,678.744 5438.26,364 5050,364H1062Z" />
+
+        <!-- Outer Knob -->
+        <path
+            android:fillColor="#E2EBFF"
+            android:pathData="M2197,3497 A859,859 0 1,0 3915,3497 A859,859 0 1,0 2197,3497 Z" />
+
+        <!-- Inner Knob -->
+        <path
+            android:fillColor="#6B9CFF"
+            android:pathData="M2340.163,3497 A716.257,716.68 0 1,0 3772.677,3497 A716.257,716.68 0 1,0 2340.163,3497 Z" />
+
+        <!-- Red Frequency Needle Indicator -->
+        <path
+            android:fillColor="#FF4747"
+            android:strokeColor="#222222"
+            android:strokeWidth="35"
+            android:pathData="M1672,1303.5C1739.1,1303.5 1793.5,1357.9 1793.5,1425V3126C1793.5,3193.1 1739.1,3247.5 1672,3247.5C1604.9,3247.5 1550.5,3193.1 1550.5,3126V1425C1550.5,1357.9 1604.9,1303.5 1672,1303.5Z" />
+    </group>
+</vector>
