@@ -39,6 +39,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -46,6 +47,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -64,20 +66,23 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -102,6 +107,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.background
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import com.android.fmradio.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
@@ -120,7 +129,11 @@ data class RecordingItem(
     val dateModified: Long
 )
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalTextApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalTextApi::class
+)
 @Composable
 fun FmRecordingsScreen(
     recordingsList: List<RecordingItem>,
@@ -294,7 +307,7 @@ fun FmRecordingsScreen(
             },
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -304,7 +317,8 @@ fun FmRecordingsScreen(
                             text = stringResource(R.string.fm_over_record_list),
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontFamily = titleFont,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 20.sp
                             ),
                             color = MaterialTheme.colorScheme.onSurface
                         )
@@ -325,11 +339,20 @@ fun FmRecordingsScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 12.dp, end = 8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .clickable(onClick = onBackClick),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(android.R.string.cancel),
-                            tint = MaterialTheme.colorScheme.onSurface
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -376,7 +399,7 @@ fun FmRecordingsScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Text(
-                        text = stringResource(R.string.toast_cannot_search),
+                        text = stringResource(R.string.recordings_empty),
                         style = MaterialTheme.typography.titleMedium.copy(fontFamily = titleFont),
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
@@ -385,78 +408,90 @@ fun FmRecordingsScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Audio recorded from live radio broadcasts will appear here.",
+                        text = stringResource(R.string.recordings_empty_desc),
                         style = MaterialTheme.typography.bodyMedium.copy(fontFamily = bodyFont),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             } else {
-                // Full-Screen Recordings List
+                val groupedRecordings = remember(recordingsList) {
+                    val now = System.currentTimeMillis()
+                    val oneDay = 24 * 60 * 60 * 1000L
+                    val groups = linkedMapOf<String, MutableList<RecordingItem>>()
+                    for (item in recordingsList) {
+                        val diff = now - item.dateModified
+                        val category = when {
+                            diff < oneDay -> "Today"
+                            diff < 2 * oneDay -> "Yesterday"
+                            diff < 7 * oneDay -> "This Week"
+                            else -> "Earlier"
+                        }
+                        groups.getOrPut(category) { mutableListOf() }.add(item)
+                    }
+                    groups
+                }
+
+                // Full-Screen Recordings Expressive Segmented List with Categories
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
-                        start = 20.dp,
-                        end = 20.dp,
+                        start = 16.dp,
+                        end = 16.dp,
                         top = 12.dp,
                         bottom = if (currentlyPlayingItem != null) 160.dp else 24.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
                 ) {
-                    items(recordingsList, key = { it.filePath }) { item ->
-                        val isThisPlaying = (currentlyPlayingItem?.uri == item.uri && isAudioPlaying)
+                    groupedRecordings.forEach { (category, items) ->
+                        item(key = "cat_$category") {
+                            Text(
+                                text = category.uppercase(Locale.getDefault()),
+                                style = MaterialTheme.typography.labelMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    letterSpacing = 1.2.sp
+                                ),
+                                modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp)
+                            )
+                        }
 
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { togglePlayback(item) },
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (currentlyPlayingItem?.uri == item.uri) {
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainerHigh
-                                }
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                // Play / Pause Button
-                                FilledTonalIconButton(
-                                    onClick = { togglePlayback(item) },
-                                    modifier = Modifier.size(48.dp),
-                                    shape = RoundedCornerShape(16.dp),
-                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                        containerColor = if (isThisPlaying) {
-                                            MaterialTheme.colorScheme.primary
-                                        } else {
-                                            MaterialTheme.colorScheme.surfaceContainerHighest
-                                        },
-                                        contentColor = if (isThisPlaying) {
-                                            MaterialTheme.colorScheme.onPrimary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                ) {
-                                    Icon(
-                                        imageVector = if (isThisPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(26.dp)
-                                    )
-                                }
+                        itemsIndexed(items, key = { _, item -> item.uri.toString() }) { index, item ->
+                            val isThisPlaying = (currentlyPlayingItem?.uri == item.uri && isAudioPlaying)
 
-                                Spacer(modifier = Modifier.width(14.dp))
-
-                                // Information details
-                                Column(modifier = Modifier.weight(1f)) {
+                            SegmentedListItem(
+                                selected = (currentlyPlayingItem?.uri == item.uri),
+                                onClick = { togglePlayback(item) },
+                                shapes = ListItemDefaults.segmentedShapes(index = index, count = items.size),
+                                modifier = Modifier.fillMaxWidth(),
+                                leadingContent = {
+                                    FilledTonalIconButton(
+                                        onClick = { togglePlayback(item) },
+                                        modifier = Modifier.size(40.dp),
+                                        shape = CircleShape,
+                                        colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                            containerColor = if (isThisPlaying) {
+                                                MaterialTheme.colorScheme.primary
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceContainerHighest
+                                            },
+                                            contentColor = if (isThisPlaying) {
+                                                MaterialTheme.colorScheme.onPrimary
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurface
+                                            }
+                                        )
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isThisPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                    }
+                                },
+                                content = {
                                     Text(
                                         text = item.title,
-                                        style = MaterialTheme.typography.titleMedium.copy(
+                                        style = MaterialTheme.typography.bodyLarge.copy(
                                             fontFamily = bodyFont,
                                             fontWeight = FontWeight.SemiBold
                                         ),
@@ -464,7 +499,8 @@ fun FmRecordingsScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
                                     )
-
+                                },
+                                supportingContent = {
                                     val formattedDate = DateFormat.format("MMM dd, yyyy • hh:mm a", Date(item.dateModified)).toString()
                                     val formattedFileSize = Formatter.formatFileSize(context, item.sizeBytes)
                                     val durationStr = if (item.durationMs > 0) {
@@ -474,44 +510,39 @@ fun FmRecordingsScreen(
                                     } else {
                                         ""
                                     }
-
-                                    Spacer(modifier = Modifier.height(2.dp))
-
                                     Text(
-                                        text = "$durationStr$formattedFileSize",
-                                        style = MaterialTheme.typography.labelMedium.copy(fontFamily = bodyFont),
-                                        color = MaterialTheme.colorScheme.primary,
-                                        maxLines = 1
+                                        text = "$durationStr$formattedFileSize • $formattedDate",
+                                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = bodyFont),
+                                        color = if (currentlyPlayingItem?.uri == item.uri) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
-
-                                    Text(
-                                        text = formattedDate,
-                                        style = MaterialTheme.typography.labelSmall.copy(fontFamily = bodyFont),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                        maxLines = 1
-                                    )
+                                },
+                                trailingContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { shareRecording(item) }) {
+                                            Icon(
+                                                imageVector = Icons.Filled.Share,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                        IconButton(onClick = { itemToDelete = item }) {
+                                            Icon(
+                                                imageVector = Icons.Filled.DeleteOutline,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(20.dp),
+                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
+                                            )
+                                        }
+                                    }
                                 }
-
-                                // Share Button
-                                IconButton(onClick = { shareRecording(item) }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Share,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-
-                                // Delete Button
-                                IconButton(onClick = { itemToDelete = item }) {
-                                    Icon(
-                                        imageVector = Icons.Filled.DeleteOutline,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(20.dp),
-                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
-                                    )
-                                }
-                            }
+                            )
                         }
                     }
                 }

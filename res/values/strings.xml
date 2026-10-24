@@ -18,7 +18,7 @@
 
 <resources>
     <!-- Application name shown in Launcher [CHAR LIMIT=20] -->
-    <string name="app_name">FM Radio</string>
+    <string name="app_name">Radio</string>
     <!-- Toast message shown after we refresh radio stations successfully [CHAR LIMIT=50] -->
     <string name="toast_station_searched">Searched out available stations:</string>
     <!-- Toast message shown after we refresh radio stations failed [CHAR LIMIT=50] -->
@@ -140,5 +140,8 @@
     <string name="stop_recording_dialog_message">Changing the station will stop the current recording. Do you want to continue?</string>
     <string name="stop_recording_confirm">Stop &amp; Tune</string>
     <string name="recordings_count_format">%d recordings</string>
+    <string name="recordings_empty">No recordings yet</string>
+    <string name="recordings_empty_desc">Audio recorded from radio broadcasts will appear here.</string>
+    <string name="saved_recordings">Saved recordings</string>
     <string name="settings">Settings</string>
 </resources>

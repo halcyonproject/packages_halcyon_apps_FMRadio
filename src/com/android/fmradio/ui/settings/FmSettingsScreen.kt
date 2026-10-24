@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2026 RevampedFMRadio Project
+ * Copyright (C) 2026 Halcyon Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,12 @@
 
 package com.android.fmradio.ui.settings
 
+import android.content.Intent
+import android.net.Uri
+import android.provider.DocumentsContract
 import androidx.activity.compose.PredictiveBackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +34,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,25 +46,33 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MotionPhotosOff
 import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.outlined.Code
+import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -69,7 +84,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -80,11 +94,14 @@ import androidx.compose.ui.unit.sp
 import com.android.fmradio.FmPreferences
 import com.android.fmradio.R
 import kotlinx.coroutines.CancellationException
+import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FmSettingsScreen(
     onBackClick: () -> Unit,
+    onOpenRecordings: () -> Unit = {},
+    recordingsCount: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -97,7 +114,29 @@ fun FmSettingsScreen(
 
     var showFormatDialog by remember { mutableStateOf(false) }
     var showBitrateDialog by remember { mutableStateOf(false) }
-    var showLocationDialog by remember { mutableStateOf(false) }
+
+    // AOSP Folder Picker Contract
+    val folderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                context.contentResolver.takePersistableUriPermission(uri, flags)
+            } catch (e: Exception) {
+                // Ignore permission persistence errors
+            }
+            val docId = DocumentsContract.getTreeDocumentId(uri)
+            val relativePath = if (docId.contains(":")) {
+                docId.substringAfter(":")
+            } else {
+                docId
+            }
+            val cleanPath = if (relativePath.isNotBlank()) relativePath else "FM Recording"
+            recordingLocation = cleanPath
+            FmPreferences.setRecordingLocation(context, cleanPath)
+        }
+    }
 
     var predictiveProgress by remember { mutableFloatStateOf(0f) }
     val animatedScale by animateFloatAsState(targetValue = 1f - predictiveProgress * 0.08f, label = "back_scale")
@@ -124,23 +163,32 @@ fun FmSettingsScreen(
             },
         containerColor = MaterialTheme.colorScheme.surface,
         topBar = {
-            CenterAlignedTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
                         text = stringResource(R.string.settings),
                         style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 22.sp
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 20.sp
                         ),
                         color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 navigationIcon = {
-                    IconButton(onClick = onBackClick) {
+                    Box(
+                        modifier = Modifier
+                            .padding(start = 12.dp, end = 8.dp)
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
+                            .clickable(onClick = onBackClick),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(android.R.string.cancel),
-                            tint = MaterialTheme.colorScheme.onSurface
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 },
@@ -156,14 +204,17 @@ fun FmSettingsScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
                 .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Group 1: General & Playback
+            // Category 1: Playback & System
             SettingsCategoryHeader(title = "Playback & System")
-            SettingsCardContainer {
-                SettingsSwitchRow(
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+            ) {
+                SettingsSegmentedSwitchRow(
                     icon = Icons.Filled.PlayCircle,
                     title = "Autoplay on launch",
                     summary = "Automatically start radio playback when opening the app",
@@ -171,39 +222,35 @@ fun FmSettingsScreen(
                     onCheckedChange = {
                         autoplayEnabled = it
                         FmPreferences.setAutoplayEnabled(context, it)
-                    }
+                    },
+                    shapes = ListItemDefaults.segmentedShapes(0, 2)
                 )
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SettingsSwitchRow(
+                SettingsSegmentedSwitchRow(
                     icon = Icons.Filled.MotionPhotosOff,
                     title = "Reduce motion",
-                    summary = "Minimize motion effects, breathing font pulses, and radar animations",
+                    summary = "Minimize motion effects, breathing font pulses, and animations",
                     checked = reduceMotion,
                     onCheckedChange = {
                         reduceMotion = it
                         FmPreferences.setReduceMotionEnabled(context, it)
-                    }
+                    },
+                    shapes = ListItemDefaults.segmentedShapes(1, 2)
                 )
             }
 
-            // Group 2: Recording
+            // Category 2: Recording Preferences
             SettingsCategoryHeader(title = "Recording Preferences")
-            SettingsCardContainer {
-                SettingsClickableRow(
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+            ) {
+                SettingsSegmentedClickableRow(
                     icon = Icons.Filled.AudioFile,
                     title = "Audio format",
                     summary = if (recordingFormat == FmPreferences.FORMAT_3GPP) "3GPP (.3gpp)" else "AAC / M4A (.m4a)",
-                    onClick = { showFormatDialog = true }
-                )
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                    onClick = { showFormatDialog = true },
+                    shapes = ListItemDefaults.segmentedShapes(0, 4)
                 )
 
                 val bitrateLabel = when (recordingBitrate) {
@@ -212,23 +259,67 @@ fun FmSettingsScreen(
                     FmPreferences.BITRATE_320K -> "320 kbps (Maximum)"
                     else -> "192 kbps (High Quality)"
                 }
-                SettingsClickableRow(
+                SettingsSegmentedClickableRow(
                     icon = Icons.Filled.GraphicEq,
                     title = "Audio bitrate",
                     summary = bitrateLabel,
-                    onClick = { showBitrateDialog = true }
+                    onClick = { showBitrateDialog = true },
+                    shapes = ListItemDefaults.segmentedShapes(1, 4)
                 )
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                SettingsClickableRow(
+                SettingsSegmentedClickableRow(
                     icon = Icons.Filled.Folder,
                     title = "Storage folder",
                     summary = recordingLocation,
-                    onClick = { showLocationDialog = true }
+                    onClick = { folderPickerLauncher.launch(null) },
+                    shapes = ListItemDefaults.segmentedShapes(2, 4)
+                )
+
+                SettingsSegmentedClickableRow(
+                    icon = Icons.AutoMirrored.Filled.QueueMusic,
+                    title = stringResource(R.string.saved_recordings),
+                    summary = if (recordingsCount > 0) String.format(Locale.getDefault(), "%d recordings", recordingsCount) else "View all recorded radio broadcasts",
+                    onClick = onOpenRecordings,
+                    shapes = ListItemDefaults.segmentedShapes(3, 4),
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                )
+            }
+
+            // Category 3: About & Credits
+            SettingsCategoryHeader(title = "About & Credits")
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
+            ) {
+                SettingsSegmentedClickableRow(
+                    icon = Icons.Outlined.Info,
+                    title = "Version",
+                    summary = "3.2.0",
+                    onClick = {},
+                    shapes = ListItemDefaults.segmentedShapes(0, 3)
+                )
+
+                SettingsSegmentedClickableRow(
+                    icon = Icons.Outlined.FavoriteBorder,
+                    title = "Credits",
+                    summary = "Halcyon Project, iusmac, LineageOS",
+                    onClick = {},
+                    shapes = ListItemDefaults.segmentedShapes(1, 3)
+                )
+
+                SettingsSegmentedClickableRow(
+                    icon = Icons.Outlined.Code,
+                    title = "License",
+                    summary = "Apache License 2.0",
+                    onClick = {},
+                    shapes = ListItemDefaults.segmentedShapes(2, 3)
                 )
             }
 
@@ -256,11 +347,11 @@ fun FmSettingsScreen(
                                     FmPreferences.setRecordingFormat(context, fmt)
                                     showFormatDialog = false
                                 }
-                                .padding(vertical = 10.dp),
+                                .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = recordingFormat == fmt,
+                                selected = (recordingFormat == fmt),
                                 onClick = {
                                     recordingFormat = fmt
                                     FmPreferences.setRecordingFormat(context, fmt)
@@ -294,23 +385,23 @@ fun FmSettingsScreen(
             title = { Text(text = "Select audio bitrate", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    bitrates.forEach { (rate, label) ->
+                    bitrates.forEach { (br, label) ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    recordingBitrate = rate
-                                    FmPreferences.setRecordingBitrate(context, rate)
+                                    recordingBitrate = br
+                                    FmPreferences.setRecordingBitrate(context, br)
                                     showBitrateDialog = false
                                 }
-                                .padding(vertical = 10.dp),
+                                .padding(vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = recordingBitrate == rate,
+                                selected = (recordingBitrate == br),
                                 onClick = {
-                                    recordingBitrate = rate
-                                    FmPreferences.setRecordingBitrate(context, rate)
+                                    recordingBitrate = br
+                                    FmPreferences.setRecordingBitrate(context, br)
                                     showBitrateDialog = false
                                 }
                             )
@@ -327,50 +418,6 @@ fun FmSettingsScreen(
             }
         )
     }
-
-    // Storage Location Dialog
-    if (showLocationDialog) {
-        var tempLocation by remember { mutableStateOf(recordingLocation) }
-        AlertDialog(
-            onDismissRequest = { showLocationDialog = false },
-            title = { Text(text = "Storage folder name", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    Text(
-                        text = "Folder name inside device Recordings / Music storage:",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = tempLocation,
-                        onValueChange = { tempLocation = it },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        val trimmed = tempLocation.trim()
-                        if (trimmed.isNotEmpty()) {
-                            recordingLocation = trimmed
-                            FmPreferences.setRecordingLocation(context, trimmed)
-                        }
-                        showLocationDialog = false
-                    }
-                ) {
-                    Text(text = stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showLocationDialog = false }) {
-                    Text(text = stringResource(android.R.string.cancel))
-                }
-            }
-        )
-    }
 }
 
 @Composable
@@ -379,132 +426,104 @@ private fun SettingsCategoryHeader(
     modifier: Modifier = Modifier
 ) {
     Text(
-        text = title,
-        style = MaterialTheme.typography.labelLarge.copy(
-            fontWeight = FontWeight.SemiBold,
+        text = title.uppercase(Locale.getDefault()),
+        style = MaterialTheme.typography.labelMedium.copy(
+            fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary,
-            fontSize = 14.sp
+            letterSpacing = 1.2.sp
         ),
-        modifier = modifier.padding(start = 12.dp, top = 4.dp, bottom = 2.dp)
+        modifier = modifier.padding(start = 24.dp, top = 8.dp, bottom = 4.dp)
     )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SettingsCardContainer(
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh
-    ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            content()
-        }
-    }
-}
-
-@Composable
-private fun SettingsSwitchRow(
+private fun SettingsSegmentedSwitchRow(
     icon: ImageVector,
     title: String,
     summary: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
+    shapes: ListItemShapes,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            modifier = Modifier.weight(1f),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(2.dp))
+    SegmentedListItem(
+        checked = checked,
+        onCheckedChange = onCheckedChange,
+        shapes = shapes,
+        modifier = modifier.fillMaxWidth(),
+        leadingContent = {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        },
+        content = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        },
+        supportingContent = if (summary.isNotBlank()) {
+            {
                 Text(
                     text = summary,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        } else null,
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
         }
-        Spacer(modifier = Modifier.width(12.dp))
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange
-        )
-    }
+    )
 }
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun SettingsClickableRow(
+private fun SettingsSegmentedClickableRow(
     icon: ImageVector,
     title: String,
     summary: String,
     onClick: () -> Unit,
+    shapes: ListItemShapes,
+    trailingContent: @Composable (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-            contentAlignment = Alignment.Center
-        ) {
+    SegmentedListItem(
+        onClick = onClick,
+        shapes = shapes,
+        modifier = modifier.fillMaxWidth(),
+        leadingContent = {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.primary
+                modifier = Modifier.size(24.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        Spacer(modifier = Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
+        },
+        content = {
             Text(
                 text = title,
                 style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
                 color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = summary,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+        },
+        supportingContent = if (summary.isNotBlank()) {
+            {
+                Text(
+                    text = summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        } else null,
+        trailingContent = trailingContent
+    )
 }

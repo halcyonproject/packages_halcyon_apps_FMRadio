@@ -28,6 +28,8 @@
 
     <!-- Action bar (With title) -->
     <color name="actionbar_title_color">@android:color/system_neutral2_200</color>
+    <color name="back_button_bg_color">@android:color/system_neutral2_700</color>
+    <color name="back_button_arrow_color">@android:color/system_neutral2_200</color>
 
     <!-- Alert Dialog -->
     <color name="alertdialog_title_color">@android:color/system_neutral2_200</color>
