@@ -38,9 +38,9 @@ val GoogleSansFlexTitle = FontFamily(
         familyName = DeviceFontFamilyName("google-sans-flex"),
         weight = FontWeight.Bold,
         variationSettings = FontVariation.Settings(
-            FontVariation.Setting("wght", 750f),
+            FontVariation.Setting("wght", 700f),
             FontVariation.Setting("wdth", 100f),
-            FontVariation.Setting("ROND", 100f)
+            FontVariation.Setting("ROND", 0f)
         )
     ),
     Font(
@@ -49,7 +49,7 @@ val GoogleSansFlexTitle = FontFamily(
         variationSettings = FontVariation.Settings(
             FontVariation.Setting("wght", 600f),
             FontVariation.Setting("wdth", 100f),
-            FontVariation.Setting("ROND", 100f)
+            FontVariation.Setting("ROND", 0f)
         )
     ),
     Font(
@@ -58,7 +58,7 @@ val GoogleSansFlexTitle = FontFamily(
         variationSettings = FontVariation.Settings(
             FontVariation.Setting("wght", 500f),
             FontVariation.Setting("wdth", 100f),
-            FontVariation.Setting("ROND", 100f)
+            FontVariation.Setting("ROND", 0f)
         )
     )
 )

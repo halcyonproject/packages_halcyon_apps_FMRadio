@@ -30,7 +30,9 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -70,6 +72,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ListAlt
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.ChevronLeft
@@ -78,9 +81,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.ListAlt
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speaker
@@ -130,6 +133,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.ExperimentalTextApi
@@ -142,12 +146,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.android.fmradio.FmPreferences
 import com.android.fmradio.FmRecorder
 import com.android.fmradio.R
 import com.android.fmradio.ui.artwork.StationArtworkGenerator
+import com.android.fmradio.ui.favorites.FmFavoritesSheet
 import com.android.fmradio.ui.recording.FmRecordingsScreen
 import com.android.fmradio.ui.recording.RecordingItem
+import com.android.fmradio.ui.settings.FmSettingsScreen
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 
 data class FavoriteStationItem(
     val id: Long,
@@ -200,6 +208,10 @@ fun FmPlayerScreen(
         }
     }
 
+    var isScrubbing by remember { mutableStateOf(false) }
+    var isSettingsVisible by remember { mutableStateOf(false) }
+    var reduceMotion by remember { mutableStateOf(FmPreferences.isReduceMotionEnabled(context)) }
+
     // App Entrance Transition on Fresh Open
     var hasEntered by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -219,39 +231,109 @@ fun FmPlayerScreen(
         label = "entrance_offset"
     )
 
-    // Stable Typography: Pre-resolved static FontFamily to eliminate font cache miss flicker
+    // Dynamic Variable Font State Definitions (wght, wdth, slnt, ROND 0)
     @OptIn(ExperimentalTextApi::class)
-    val roundedTitleFont = remember {
+    val pausedTitleFont = remember {
         FontFamily(
             Font(
                 familyName = DeviceFontFamilyName("google-sans-flex"),
-                weight = FontWeight.Bold,
+                weight = FontWeight.Normal,
                 variationSettings = FontVariation.Settings(
-                    FontVariation.Setting("wght", 800f),
-                    FontVariation.Setting("wdth", 110f),
-                    FontVariation.Setting("ROND", 100f)
+                    FontVariation.Setting("wght", 400f),
+                    FontVariation.Setting("wdth", 100f),
+                    FontVariation.Setting("slnt", 0f),
+                    FontVariation.Setting("ROND", 0f)
                 )
             )
         )
     }
 
-    // Dynamic Typography Spring Physics (GPU-accelerated RenderNode scale, 0 frame drops, 0 font reloads)
-    val fontScaleX by animateFloatAsState(
-        targetValue = if (isSeeking) 1.08f else if (isPlaying) 1.03f else 0.98f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+    @OptIn(ExperimentalTextApi::class)
+    val playedTitleFont = remember {
+        FontFamily(
+            Font(
+                familyName = DeviceFontFamilyName("google-sans-flex"),
+                weight = FontWeight.Bold,
+                variationSettings = FontVariation.Settings(
+                    FontVariation.Setting("wght", 700f),
+                    FontVariation.Setting("wdth", 135f),
+                    FontVariation.Setting("slnt", 0f),
+                    FontVariation.Setting("ROND", 0f)
+                )
+            )
+        )
+    }
+
+    @OptIn(ExperimentalTextApi::class)
+    val recordingTitleFont = remember {
+        FontFamily(
+            Font(
+                familyName = DeviceFontFamilyName("google-sans-flex"),
+                weight = FontWeight.Bold,
+                variationSettings = FontVariation.Settings(
+                    FontVariation.Setting("wght", 700f),
+                    FontVariation.Setting("wdth", 135f),
+                    FontVariation.Setting("slnt", -10f),
+                    FontVariation.Setting("ROND", 0f)
+                )
+            )
+        )
+    }
+
+    // 21-step quantized breathing list (wght 400..800 step 20, wdth 135, slnt 0) for zero-flicker breathing
+    @OptIn(ExperimentalTextApi::class)
+    val breathingTitleFonts = remember {
+        (400..800 step 20).map { weight ->
+            FontFamily(
+                Font(
+                    familyName = DeviceFontFamilyName("google-sans-flex"),
+                    weight = FontWeight(weight),
+                    variationSettings = FontVariation.Settings(
+                        FontVariation.Setting("wght", weight.toFloat()),
+                        FontVariation.Setting("wdth", 135f),
+                        FontVariation.Setting("slnt", 0f),
+                        FontVariation.Setting("ROND", 0f)
+                    )
+                )
+            )
+        }
+    }
+
+    // Asynchronously pre-warm TypefaceRequestCache to eliminate any font load flicker
+    val fontResolver = LocalFontFamilyResolver.current
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.Default) {
+            fontResolver.resolve(pausedTitleFont)
+            fontResolver.resolve(playedTitleFont)
+            fontResolver.resolve(recordingTitleFont)
+            breathingTitleFonts.forEach { fontResolver.resolve(it) }
+        }
+    }
+
+    val isScrubbingOrSeeking = isScrubbing || isSeeking
+    val breathingTransition = rememberInfiniteTransition(label = "title_breathing")
+    val breathingStep by breathingTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 20f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
         ),
-        label = "font_scale_x"
+        label = "breathing_step"
     )
-    val fontScaleY by animateFloatAsState(
-        targetValue = if (isSeeking) 1.04f else if (isPlaying) 1.01f else 0.99f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "font_scale_y"
-    )
+
+    val currentBreathingFont = if (reduceMotion) {
+        breathingTitleFonts[10] // static wght 600
+    } else {
+        breathingTitleFonts[breathingStep.roundToInt().coerceIn(0, 20)]
+    }
+
+    val currentTitleFont = when {
+        isRecording -> recordingTitleFont
+        isScrubbingOrSeeking -> currentBreathingFont
+        isPlaying -> playedTitleFont
+        else -> pausedTitleFont
+    }
 
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -339,7 +421,8 @@ fun FmPlayerScreen(
                             isRecording = isRecording,
                             recordDurationMs = recordDurationMs,
                             onToggleSpeakerClick = onToggleSpeakerClick,
-                            onRecordClick = onRecordClick
+                            onRecordClick = onRecordClick,
+                            onOpenSettingsClick = { isSettingsVisible = true }
                         )
 
                         StationTitleBlock(
@@ -347,9 +430,7 @@ fun FmPlayerScreen(
                             stationName = stationName,
                             radioText = radioText,
                             isPlaying = isPlaying,
-                            titleFont = roundedTitleFont,
-                            fontScaleX = fontScaleX,
-                            fontScaleY = fontScaleY
+                            titleFont = currentTitleFont
                         )
 
                         DottedTunerScrubber(
@@ -357,6 +438,7 @@ fun FmPlayerScreen(
                             isPlaying = isPlaying,
                             enabled = controlsEnabled,
                             onFrequencySeek = { freq -> safeChangeStation { onFrequencySeek(freq) } },
+                            onScrubbingStateChange = { isScrubbing = it },
                             modifier = Modifier.padding(vertical = 2.dp)
                         )
 
@@ -400,6 +482,7 @@ fun FmPlayerScreen(
                         recordDurationMs = recordDurationMs,
                         onToggleSpeakerClick = onToggleSpeakerClick,
                         onRecordClick = onRecordClick,
+                        onOpenSettingsClick = { isSettingsVisible = true },
                         modifier = Modifier.padding(top = 10.dp, bottom = 4.dp)
                     )
 
@@ -428,9 +511,7 @@ fun FmPlayerScreen(
                         stationName = stationName,
                         radioText = radioText,
                         isPlaying = isPlaying,
-                        titleFont = roundedTitleFont,
-                        fontScaleX = fontScaleX,
-                        fontScaleY = fontScaleY,
+                        titleFont = currentTitleFont,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
 
@@ -439,6 +520,7 @@ fun FmPlayerScreen(
                         isPlaying = isPlaying,
                         enabled = controlsEnabled,
                         onFrequencySeek = { freq -> safeChangeStation { onFrequencySeek(freq) } },
+                        onScrubbingStateChange = { isScrubbing = it },
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
 
@@ -471,96 +553,21 @@ fun FmPlayerScreen(
             }
         }
 
-        // Favorites Modal Bottom Sheet
+        // Favorites Modal Bottom Sheet with Reordering, Renaming, Adding, Deleting
         if (showBottomSheet) {
-            ModalBottomSheet(
-                onDismissRequest = { showBottomSheet = false },
+            FmFavoritesSheet(
+                favoritesList = favoritesList,
+                currentFrequency = currentFrequency,
                 sheetState = sheetState,
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 32.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.favorites),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                    )
-
-                    if (favoritesList.isEmpty()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = stringResource(R.string.no_favorite_station),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-                        ) {
-                            items(favoritesList, key = { it.id }) { item ->
-                                val isCurrent = item.frequency == freqInt
-                                val stationDisplayName = if (item.name.isNotBlank()) item.name else String.format(Locale.US, "%.1fFM", item.frequency / 10f)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(
-                                            if (isCurrent) {
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            } else {
-                                                Color.Transparent
-                                            }
-                                        )
-                                        .clickable {
-                                            safeChangeStation { onStationSelect(item.frequency) }
-                                            scope.launch {
-                                                sheetState.hide()
-                                                showBottomSheet = false
-                                            }
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column {
-                                        Text(
-                                            text = stationDisplayName,
-                                            style = MaterialTheme.typography.bodyLarge,
-                                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
-                                            color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Text(
-                                            text = String.format(Locale.US, "%.1f MHz", item.frequency / 10f),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    if (isCurrent) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                onStationSelect = { freq ->
+                    safeChangeStation { onStationSelect(freq) }
+                },
+                onDismissRequest = { showBottomSheet = false },
+                onReloadFavorites = onReloadFavorites
+            )
         }
 
+        // Fullscreen Saved Recordings with In-App Player & Seekbar
         AnimatedVisibility(
             visible = isRecordingSheetVisible,
             enter = fadeIn(),
@@ -569,7 +576,22 @@ fun FmPlayerScreen(
             FmRecordingsScreen(
                 recordingsList = recordingsList,
                 onDeleteRecording = onDeleteRecording,
-                onBackClick = onDismissRecordingSheet
+                onBackClick = onDismissRecordingSheet,
+                onPauseRadio = { if (isPlaying) onPlayPauseClick() }
+            )
+        }
+
+        // Settings Screen with Grouped Preferences & Reduce Motion Toggle
+        AnimatedVisibility(
+            visible = isSettingsVisible,
+            enter = slideInHorizontally { it } + fadeIn(),
+            exit = slideOutHorizontally { it } + fadeOut()
+        ) {
+            FmSettingsScreen(
+                onBackClick = {
+                    reduceMotion = FmPreferences.isReduceMotionEnabled(context)
+                    isSettingsVisible = false
+                }
             )
         }
 
@@ -627,6 +649,7 @@ private fun TopStatusPillGroup(
     recordDurationMs: Long,
     onToggleSpeakerClick: () -> Unit,
     onRecordClick: () -> Unit,
+    onOpenSettingsClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -708,6 +731,25 @@ private fun TopStatusPillGroup(
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
+            }
+        }
+
+        // 3. Settings Action Pill
+        Surface(
+            onClick = onOpenSettingsClick,
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh
+        ) {
+            Box(
+                modifier = Modifier.padding(8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = stringResource(R.string.settings),
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.onSurface
+                )
             }
         }
     }
@@ -897,7 +939,7 @@ private fun ArtworkHeroCard(
 
 /**
  * Centered Station Title & Subtitle with smooth slide + fade animated transition.
- * Uses static variable typography and RenderNode scaling to avoid font flicker.
+ * Uses hardware variable font variations for seamless weight/width breathing.
  */
 @Composable
 private fun StationTitleBlock(
@@ -906,8 +948,6 @@ private fun StationTitleBlock(
     radioText: String,
     isPlaying: Boolean,
     titleFont: FontFamily,
-    fontScaleX: Float = 1.0f,
-    fontScaleY: Float = 1.0f,
     modifier: Modifier = Modifier
 ) {
     val formattedFreq = String.format(Locale.US, "%.1fFM", currentFrequency)
@@ -934,17 +974,12 @@ private fun StationTitleBlock(
                 fontSize = 40.sp,
                 lineHeight = 46.sp,
                 letterSpacing = (-0.5).sp,
-                fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
             ),
             color = MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .graphicsLayer {
-                    scaleX = fontScaleX
-                    scaleY = fontScaleY
-                }
                 .then(if (isPlaying) Modifier.basicMarquee() else Modifier)
         )
 
@@ -1238,7 +1273,7 @@ private fun BottomControlsBar(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Filled.ListAlt,
+                        imageVector = Icons.AutoMirrored.Filled.ListAlt,
                         contentDescription = stringResource(R.string.favorites),
                         modifier = Modifier.size(18.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant

@@ -55,6 +55,7 @@ fun DottedTunerScrubber(
     isPlaying: Boolean = false,
     enabled: Boolean = true,
     onFrequencySeek: (Float) -> Unit,
+    onScrubbingStateChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -99,6 +100,7 @@ fun DottedTunerScrubber(
                 detectDragGestures(
                     onDragStart = { offset ->
                         isDragging = true
+                        onScrubbingStateChange(true)
                         val fraction = (offset.x / size.width).coerceIn(0f, 1f)
                         val rawFreq = minFrequency + fraction * (maxFrequency - minFrequency)
                         val stepped = (round(rawFreq * 10f) / 10f).coerceIn(minFrequency, maxFrequency)
@@ -108,8 +110,14 @@ fun DottedTunerScrubber(
                         }
                         onFrequencySeek(stepped)
                     },
-                    onDragEnd = { isDragging = false },
-                    onDragCancel = { isDragging = false },
+                    onDragEnd = {
+                        isDragging = false
+                        onScrubbingStateChange(false)
+                    },
+                    onDragCancel = {
+                        isDragging = false
+                        onScrubbingStateChange(false)
+                    },
                     onDrag = { change, _ ->
                         change.consume()
                         val fraction = (change.position.x / size.width).coerceIn(0f, 1f)
