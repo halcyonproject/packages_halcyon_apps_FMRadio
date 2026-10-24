@@ -231,7 +231,7 @@ fun FmPlayerScreen(
         label = "entrance_offset"
     )
 
-    // Dynamic Variable Font State Definitions (wght, wdth, slnt, ROND 0)
+    // Dynamic Variable Font State Definitions (wght, wdth, slnt, ROND 100)
     @OptIn(ExperimentalTextApi::class)
     val pausedTitleFont = remember {
         FontFamily(
@@ -242,7 +242,7 @@ fun FmPlayerScreen(
                     FontVariation.Setting("wght", 400f),
                     FontVariation.Setting("wdth", 100f),
                     FontVariation.Setting("slnt", 0f),
-                    FontVariation.Setting("ROND", 0f)
+                    FontVariation.Setting("ROND", 100f)
                 )
             )
         )
@@ -258,7 +258,7 @@ fun FmPlayerScreen(
                     FontVariation.Setting("wght", 700f),
                     FontVariation.Setting("wdth", 135f),
                     FontVariation.Setting("slnt", 0f),
-                    FontVariation.Setting("ROND", 0f)
+                    FontVariation.Setting("ROND", 100f)
                 )
             )
         )
@@ -274,25 +274,26 @@ fun FmPlayerScreen(
                     FontVariation.Setting("wght", 700f),
                     FontVariation.Setting("wdth", 135f),
                     FontVariation.Setting("slnt", -10f),
-                    FontVariation.Setting("ROND", 0f)
+                    FontVariation.Setting("ROND", 100f)
                 )
             )
         )
     }
 
-    // 21-step quantized breathing list (wght 400..800 step 20, wdth 135, slnt 0) for zero-flicker breathing
+    // 15-step quantized breathing list (wght 800, breathing wdth 100..135, slnt 0, ROND 100)
     @OptIn(ExperimentalTextApi::class)
     val breathingTitleFonts = remember {
-        (400..800 step 20).map { weight ->
+        (0..14).map { step ->
+            val width = 100f + step * 2.5f
             FontFamily(
                 Font(
                     familyName = DeviceFontFamilyName("google-sans-flex"),
-                    weight = FontWeight(weight),
+                    weight = FontWeight.ExtraBold,
                     variationSettings = FontVariation.Settings(
-                        FontVariation.Setting("wght", weight.toFloat()),
-                        FontVariation.Setting("wdth", 135f),
+                        FontVariation.Setting("wght", 800f),
+                        FontVariation.Setting("wdth", width),
                         FontVariation.Setting("slnt", 0f),
-                        FontVariation.Setting("ROND", 0f)
+                        FontVariation.Setting("ROND", 100f)
                     )
                 )
             )
@@ -314,7 +315,7 @@ fun FmPlayerScreen(
     val breathingTransition = rememberInfiniteTransition(label = "title_breathing")
     val breathingStep by breathingTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 20f,
+        targetValue = 14f,
         animationSpec = infiniteRepeatable(
             animation = tween(durationMillis = 900, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
@@ -323,9 +324,9 @@ fun FmPlayerScreen(
     )
 
     val currentBreathingFont = if (reduceMotion) {
-        breathingTitleFonts[10] // static wght 600
+        breathingTitleFonts[7] // static wdth 117.5f
     } else {
-        breathingTitleFonts[breathingStep.roundToInt().coerceIn(0, 20)]
+        breathingTitleFonts[breathingStep.roundToInt().coerceIn(0, 14)]
     }
 
     val currentTitleFont = when {
@@ -334,6 +335,24 @@ fun FmPlayerScreen(
         isPlaying -> playedTitleFont
         else -> pausedTitleFont
     }
+
+    // Tactile Spring RenderNode Physics between interactions
+    val fontScaleX by animateFloatAsState(
+        targetValue = if (reduceMotion) 1f else if (isScrubbingOrSeeking) 1.06f else if (isPlaying) 1.02f else 0.98f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "font_scale_x"
+    )
+    val fontScaleY by animateFloatAsState(
+        targetValue = if (reduceMotion) 1f else if (isScrubbingOrSeeking) 1.03f else if (isPlaying) 1.01f else 0.99f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "font_scale_y"
+    )
 
     var showBottomSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
@@ -430,7 +449,9 @@ fun FmPlayerScreen(
                             stationName = stationName,
                             radioText = radioText,
                             isPlaying = isPlaying,
-                            titleFont = currentTitleFont
+                            titleFont = currentTitleFont,
+                            fontScaleX = fontScaleX,
+                            fontScaleY = fontScaleY
                         )
 
                         DottedTunerScrubber(
@@ -512,6 +533,8 @@ fun FmPlayerScreen(
                         radioText = radioText,
                         isPlaying = isPlaying,
                         titleFont = currentTitleFont,
+                        fontScaleX = fontScaleX,
+                        fontScaleY = fontScaleY,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
 
@@ -948,6 +971,8 @@ private fun StationTitleBlock(
     radioText: String,
     isPlaying: Boolean,
     titleFont: FontFamily,
+    fontScaleX: Float = 1.0f,
+    fontScaleY: Float = 1.0f,
     modifier: Modifier = Modifier
 ) {
     val formattedFreq = String.format(Locale.US, "%.1fFM", currentFrequency)
@@ -980,6 +1005,10 @@ private fun StationTitleBlock(
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier
+                .graphicsLayer {
+                    scaleX = fontScaleX
+                    scaleY = fontScaleY
+                }
                 .then(if (isPlaying) Modifier.basicMarquee() else Modifier)
         )
 
