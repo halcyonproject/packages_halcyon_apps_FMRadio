@@ -37,6 +37,7 @@ import android.content.pm.ServiceInfo;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import com.android.fmradio.ui.artwork.StationArtworkGenerator;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceAttributes;
 import android.media.AudioDeviceInfo;
@@ -1951,14 +1952,27 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                             PlaybackState.STATE_PLAYING :
                             PlaybackState.STATE_PAUSED), 0, 1.0f).build());
 
-            // Show FM Radio if empty
-            if (TextUtils.isEmpty(stationName)) {
-                stationName = getString(R.string.app_name);
+            String formattedFreq = FmUtils.formatStation(mCurrentStation) + " MHz";
+            String title = stationName;
+            String artist = radioText;
+
+            // If station name / RDS program service is omitted, use frequency as main title
+            if (TextUtils.isEmpty(title)) {
+                title = formattedFreq;
             }
 
+            // If RDS radio text is omitted, use app name or frequency as artist
+            if (TextUtils.isEmpty(artist)) {
+                artist = title.equals(formattedFreq) ? getString(R.string.app_name) : formattedFreq;
+            }
+
+            Bitmap artwork = StationArtworkGenerator.getStationArtwork(mContext, mCurrentStation, title);
+
             mSession.setMetadata(new MediaMetadata.Builder()
-                    .putString(MediaMetadata.METADATA_KEY_ARTIST, radioText)
-                    .putString(MediaMetadata.METADATA_KEY_TITLE, stationName)
+                    .putString(MediaMetadata.METADATA_KEY_ARTIST, artist)
+                    .putString(MediaMetadata.METADATA_KEY_TITLE, title)
+                    .putBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART, artwork)
+                    .putBitmap(MediaMetadata.METADATA_KEY_ART, artwork)
                     .build());
 
             if (isActivityForeground() || (getRecorderState() == FmRecorder.STATE_RECORDING)) {
@@ -2018,24 +2032,18 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                     getString(R.string.accessibility_next) , pIntent);
             notificationBuilder.setContentIntent(pAIntent);
 
-            final String freq = FmUtils.formatStation(mCurrentStation);
-            if (!freq.equals(mCachedArtworkKey)) {
-                mCachedArtwork = FmUtils.createNotificationArtwork(mContext, freq);
-                mCachedArtworkKey = freq;
-            }
             notificationBuilder.setColor(mContext.getResources()
                     .getColor(R.color.notification_icon_bg_color));
-            notificationBuilder.setLargeIcon(mCachedArtwork);
+            notificationBuilder.setLargeIcon(artwork);
 
             // Apply the media style template
             notificationBuilder.setStyle(
                     new Notification.MediaStyle()
                     .setShowActionsInCompactView(0, 1, 2)
                     .setMediaSession(mSession.getSessionToken()));
-            notificationBuilder.setContentTitle(stationName);
-            // If radio text is "" or null, we also need to update notification.
-            notificationBuilder.setContentText(radioText);
-            Log.d(TAG, "showPlayingNotification PS:" + stationName + ", RT:" + radioText);
+            notificationBuilder.setContentTitle(title);
+            notificationBuilder.setContentText(artist);
+            Log.d(TAG, "showPlayingNotification Title:" + title + ", Subtitle:" + artist);
 
             Notification n = notificationBuilder.build();
             n.flags &= ~Notification.FLAG_NO_CLEAR;
