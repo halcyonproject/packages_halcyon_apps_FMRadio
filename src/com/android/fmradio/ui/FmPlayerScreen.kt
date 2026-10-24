@@ -115,6 +115,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.SideEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.Alignment
@@ -451,7 +452,8 @@ fun FmPlayerScreen(
                             isPlaying = isPlaying,
                             titleFont = currentTitleFont,
                             fontScaleX = fontScaleX,
-                            fontScaleY = fontScaleY
+                            fontScaleY = fontScaleY,
+                            reduceMotion = reduceMotion
                         )
 
                         DottedTunerScrubber(
@@ -535,6 +537,7 @@ fun FmPlayerScreen(
                         titleFont = currentTitleFont,
                         fontScaleX = fontScaleX,
                         fontScaleY = fontScaleY,
+                        reduceMotion = reduceMotion,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
 
@@ -973,6 +976,7 @@ private fun StationTitleBlock(
     titleFont: FontFamily,
     fontScaleX: Float = 1.0f,
     fontScaleY: Float = 1.0f,
+    reduceMotion: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val formattedFreq = String.format(Locale.US, "%.1fFM", currentFrequency)
@@ -988,52 +992,107 @@ private fun StationTitleBlock(
     // Deduplicate subtitle if identical to station title
     val showSubtitle = displaySubtitle.isNotBlank() && !displaySubtitle.equals(displayTitle, ignoreCase = true)
 
+    var lastFrequency by remember { mutableFloatStateOf(currentFrequency) }
+    val direction = when {
+        currentFrequency > lastFrequency + 0.01f -> 1
+        currentFrequency < lastFrequency - 0.01f -> -1
+        else -> 0
+    }
+    SideEffect {
+        lastFrequency = currentFrequency
+    }
+
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            text = displayTitle,
-            style = MaterialTheme.typography.displaySmall.copy(
-                fontFamily = titleFont,
-                fontSize = 40.sp,
-                lineHeight = 46.sp,
-                letterSpacing = (-0.5).sp,
-                textAlign = TextAlign.Center
-            ),
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .graphicsLayer {
-                    scaleX = fontScaleX
-                    scaleY = fontScaleY
+        // Title with contextual directional slide + fade transition
+        AnimatedContent(
+            targetState = displayTitle,
+            transitionSpec = {
+                if (reduceMotion) {
+                    fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                } else if (direction < 0) {
+                    // Previous scrubbing / lower freq: moves to left
+                    (slideInHorizontally(animationSpec = tween(300)) { width -> width / 2 } + fadeIn(tween(300)))
+                        .togetherWith(slideOutHorizontally(animationSpec = tween(300)) { width -> -width / 2 } + fadeOut(tween(300)))
+                } else if (direction > 0) {
+                    // Next scrubbing / higher freq: moves to right
+                    (slideInHorizontally(animationSpec = tween(300)) { width -> -width / 2 } + fadeIn(tween(300)))
+                        .togetherWith(slideOutHorizontally(animationSpec = tween(300)) { width -> width / 2 } + fadeOut(tween(300)))
+                } else {
+                    fadeIn(animationSpec = tween(250)) togetherWith fadeOut(animationSpec = tween(250))
                 }
-                .then(if (isPlaying) Modifier.basicMarquee() else Modifier)
-        )
+            },
+            label = "title_directional_slide"
+        ) { targetTitle ->
+            Text(
+                text = targetTitle,
+                style = MaterialTheme.typography.displaySmall.copy(
+                    fontFamily = titleFont,
+                    fontSize = 40.sp,
+                    lineHeight = 46.sp,
+                    letterSpacing = (-0.5).sp,
+                    textAlign = TextAlign.Center
+                ),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = fontScaleX
+                        scaleY = fontScaleY
+                    }
+                    .then(if (isPlaying) Modifier.basicMarquee() else Modifier)
+            )
+        }
 
-        if (showSubtitle) {
-            Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(4.dp))
 
-            // Subtitle with smooth slide + fade transition when frequency or RDS updates
-            AnimatedContent(
-                targetState = displaySubtitle,
-                transitionSpec = {
-                    (slideInVertically { height -> height / 2 } + fadeIn())
-                        .togetherWith(slideOutVertically { height -> -height / 2 } + fadeOut())
-                },
-                label = "subtitle_slide_fade"
-            ) { targetSubtitle ->
-                Text(
-                    text = targetSubtitle,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontWeight = FontWeight.Normal,
-                        textAlign = TextAlign.Center
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+        // Reserved Subtitle Box to prevent title jumping when subtitle appears / disappears
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            this@Column.AnimatedVisibility(
+                visible = showSubtitle,
+                enter = if (reduceMotion) fadeIn(tween(200)) else fadeIn(tween(250)) + slideInVertically(animationSpec = tween(250)) { it / 2 },
+                exit = if (reduceMotion) fadeOut(tween(200)) else fadeOut(tween(200)) + slideOutVertically(animationSpec = tween(200)) { -it / 2 }
+            ) {
+                // Subtitle with smooth directional slide + fade transition when frequency or RDS updates
+                AnimatedContent(
+                    targetState = displaySubtitle,
+                    transitionSpec = {
+                        if (reduceMotion) {
+                            fadeIn(tween(200)) togetherWith fadeOut(tween(200))
+                        } else if (direction < 0) {
+                            // Previous scrubbing / lower freq: moves to left
+                            (slideInHorizontally(animationSpec = tween(300)) { width -> width / 2 } + fadeIn(tween(300)))
+                                .togetherWith(slideOutHorizontally(animationSpec = tween(300)) { width -> -width / 2 } + fadeOut(tween(300)))
+                        } else if (direction > 0) {
+                            // Next scrubbing / higher freq: moves to right
+                            (slideInHorizontally(animationSpec = tween(300)) { width -> -width / 2 } + fadeIn(tween(300)))
+                                .togetherWith(slideOutHorizontally(animationSpec = tween(300)) { width -> width / 2 } + fadeOut(tween(300)))
+                        } else {
+                            (slideInVertically(animationSpec = tween(250)) { height -> height / 2 } + fadeIn(tween(250)))
+                                .togetherWith(slideOutVertically(animationSpec = tween(250)) { height -> -height / 2 } + fadeOut(tween(250)))
+                        }
+                    },
+                    label = "subtitle_directional_slide"
+                ) { targetSubtitle ->
+                    Text(
+                        text = targetSubtitle,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Normal,
+                            textAlign = TextAlign.Center
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
