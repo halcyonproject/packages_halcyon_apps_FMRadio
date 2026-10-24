@@ -18,6 +18,7 @@
 <resources>
 
     <style name="AppThemeMain" parent="@android:style/Theme.Material.Light">
+        <item name="android:fontFamily">google-sans-flex</item>
         <item name="android:colorPrimaryDark">@color/actionbar_untitled_statusbar_bg_color</item>
         <item name="android:colorPrimary">@color/actionbar_untitled_bg_color</item>
         <item name="android:textColor">@drawable/actionbar_popup_item</item>

@@ -31,6 +31,7 @@ import android.database.Cursor;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -53,8 +54,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.Toolbar;
 
+import androidx.activity.ComponentActivity;
+import androidx.core.view.WindowCompat;
+
 import com.android.fmradio.FmStation.Station;
 import com.android.fmradio.dialogs.FmFavoriteEditDialog;
+import com.android.fmradio.ui.FmMainUiBridge;
+import com.android.fmradio.ui.FmUiStateHolder;
 import com.android.fmradio.views.FmScroller;
 import com.android.fmradio.views.FmSnackBar;
 import com.android.fmradio.views.FmScroller.EventListener;
@@ -66,7 +72,7 @@ import java.util.List;
 /**
  * This class interact with user, provide FM basic function.
  */
-public class FmMainActivity extends Activity implements FmFavoriteEditDialog.EditFavoriteListener {
+public class FmMainActivity extends ComponentActivity implements FmFavoriteEditDialog.EditFavoriteListener {
     // Logging
     private static final String TAG = "FmMainActivity";
 
@@ -142,6 +148,8 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     private boolean mIsActivityForeground = true;
 
     private int mCurrentStation = FmUtils.DEFAULT_STATION;
+
+    private final FmUiStateHolder mUiState = new FmUiStateHolder();
 
     // Instance variables
     private FmService mService = null;
@@ -240,6 +248,9 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
                     break;
 
                 case FmListener.MSGID_POWERDOWN_FINISHED:
+                    if (mUiState != null) {
+                        mUiState.setSeeking(false);
+                    }
                     bundle = msg.getData();
                     refreshImageButton(false);
                     refreshActionMenuItem(false);
@@ -248,6 +259,9 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
                     break;
 
                 case FmListener.MSGID_TUNE_FINISHED:
+                    if (mUiState != null) {
+                        mUiState.setSeeking(false);
+                    }
                     bundle = msg.getData();
                     boolean isTune = bundle.getBoolean(FmListener.KEY_IS_TUNE);
                     boolean isPowerUp = (mService.getPowerStatus() == FmService.POWER_UP);
@@ -286,15 +300,25 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
 
                 case FmListener.LISTEN_PS_CHANGED:
                     String stationName = FmStation.getStationName(mContext, mCurrentStation);
-                    mTextStationName.setText(stationName);
-                    mScroller.notifyAdatperCurrentItemRDSChanged();
+                    mUiState.setStationName(stationName);
+                    if (mTextStationName != null) {
+                        mTextStationName.setText(stationName);
+                    }
+                    if (mScroller != null) {
+                        mScroller.notifyAdatperCurrentItemRDSChanged();
+                    }
                     break;
 
                 case FmListener.LISTEN_RT_CHANGED:
                     bundle = msg.getData();
                     String rtString = bundle.getString(FmListener.KEY_RT_INFO);
-                    mTextRds.setText(rtString);
-                    mScroller.notifyAdatperCurrentItemRDSChanged();
+                    mUiState.setRadioText(rtString);
+                    if (mTextRds != null) {
+                        mTextRds.setText(rtString);
+                    }
+                    if (mScroller != null) {
+                        mScroller.notifyAdatperCurrentItemRDSChanged();
+                    }
                     break;
 
                 case FmListener.LISTEN_SPEAKER_MODE_CHANGED:
@@ -307,6 +331,19 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
                 case FmListener.LISTEN_RECORDSTATE_CHANGED:
                     if (mService != null) {
                         mService.updatePlayingNotification();
+                        int recState = mService.getRecorderState();
+                        mUiState.setRecording(recState == FmRecorder.STATE_RECORDING);
+                        mUiState.setRecordingState(recState);
+                        if (recState == FmRecorder.STATE_RECORDING) {
+                            startRecordingProgressUpdates();
+                        } else {
+                            stopRecordingProgressUpdates();
+                            String defaultName = mService.getRecordingName();
+                            if (defaultName != null) {
+                                mUiState.setRecordingName(defaultName);
+                            }
+                            mUiState.reloadRecordings(mContext);
+                        }
                     }
                     break;
 
@@ -315,6 +352,30 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             }
         }
     };
+
+    private final Runnable mRecordingProgressRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (mService != null && mUiState != null && mService.getRecorderState() == FmRecorder.STATE_RECORDING) {
+                mUiState.setRecordDuration(mService.getRecordTime());
+                mUiState.setRecordSize(mService.getFileSize());
+                mHandler.postDelayed(this, 500);
+            }
+        }
+    };
+
+    private void startRecordingProgressUpdates() {
+        mHandler.removeCallbacks(mRecordingProgressRunnable);
+        mHandler.post(mRecordingProgressRunnable);
+    }
+
+    private void stopRecordingProgressUpdates() {
+        mHandler.removeCallbacks(mRecordingProgressRunnable);
+        if (mService != null && mUiState != null) {
+            mUiState.setRecordDuration(mService.getRecordTime());
+            mUiState.setRecordSize(mService.getFileSize());
+        }
+    }
 
     // When call bind service, it will call service connect. register call back
     // listener and initial device
@@ -340,6 +401,17 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             if (FmRecorder.STATE_RECORDING != mService.getRecorderState()) {
                 mService.removeNotification();
             }
+            mUiState.setFrequency(FmUtils.computeFrequency(mCurrentStation));
+            mUiState.setPlaying(mService.getPowerStatus() == FmService.POWER_UP);
+            mUiState.setSpeakerUsed(mService.isSpeakerUsed());
+            int recState = mService.getRecorderState();
+            mUiState.setRecording(recState == FmRecorder.STATE_RECORDING);
+            mUiState.setRecordingState(recState);
+            if (recState == FmRecorder.STATE_RECORDING) {
+                startRecordingProgressUpdates();
+            }
+            mUiState.reloadRecordings(mContext);
+            mUiState.reloadFavorites(mContext);
             if (!mService.isServiceInited()) {
                 mService.initService(mCurrentStation);
                 powerUpFm();
@@ -381,12 +453,15 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             }
             changeToMainLayout();
             cancelMainAnimation();
-            Animation anim = AnimationUtils.loadAnimation(mContext,
-                    R.anim.main_alpha_in);
-            mMainLayout.startAnimation(anim);
-            anim = AnimationUtils.loadAnimation(mContext, R.anim.floatbtn_alpha_in);
-
-            mBtnPlayContainer.startAnimation(anim);
+            if (mMainLayout != null) {
+                Animation anim = AnimationUtils.loadAnimation(mContext,
+                        R.anim.main_alpha_in);
+                mMainLayout.startAnimation(anim);
+            }
+            if (mBtnPlayContainer != null) {
+                Animation anim = AnimationUtils.loadAnimation(mContext, R.anim.floatbtn_alpha_in);
+                mBtnPlayContainer.startAnimation(anim);
+            }
         }
 
         @Override
@@ -395,7 +470,9 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
 
         @Override
         public void onAnimationStart(Animation animation) {
-            mNoHeadsetImgViewWrap.setElevation(0);
+            if (mNoHeadsetImgViewWrap != null) {
+                mNoHeadsetImgViewWrap.setElevation(0);
+            }
         }
     }
 
@@ -408,9 +485,11 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             }
             changeToNoHeadsetLayout();
             cancelNoHeadsetAnimation();
-            Animation anim = AnimationUtils.loadAnimation(mContext,
-                    R.anim.noeaphone_alpha_in);
-            mNoHeadsetLayout.startAnimation(anim);
+            if (mNoHeadsetLayout != null) {
+                Animation anim = AnimationUtils.loadAnimation(mContext,
+                        R.anim.noeaphone_alpha_in);
+                mNoHeadsetLayout.startAnimation(anim);
+            }
         }
 
         @Override
@@ -427,15 +506,21 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
      * Update the favorite UI state
      */
     private void updateFavoriteStation() {
-        // Judge the current output and switch between the devices.
         if (FmStation.isFavoriteStation(mContext, mCurrentStation)) {
             FmStation.removeFromFavorite(mContext, mCurrentStation);
-            mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_off_selector);
-            // Notify scroller
-            mScroller.onRemoveFavorite();
-            mTextStationName.setText(FmStation.getStationName(mContext, mCurrentStation));
+            mUiState.setFavorite(false);
+            if (mButtonAddToFavorite != null) {
+                mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_off_selector);
+            }
+            if (mScroller != null) {
+                mScroller.onRemoveFavorite();
+            }
+            String stationName = FmStation.getStationName(mContext, mCurrentStation);
+            mUiState.setStationName(stationName);
+            if (mTextStationName != null) {
+                mTextStationName.setText(stationName);
+            }
         } else {
-            // Add the station to favorite
             if (FmStation.isStationExist(mContext, mCurrentStation)) {
                 FmStation.addToFavorite(mContext, mCurrentStation);
             } else {
@@ -444,10 +529,15 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
                 values.put(Station.IS_FAVORITE, true);
                 FmStation.insertStationToDb(mContext, values);
             }
-            mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_on_selector);
-            // Notify scroller
-            mScroller.onAddFavorite();
+            mUiState.setFavorite(true);
+            if (mButtonAddToFavorite != null) {
+                mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_on_selector);
+            }
+            if (mScroller != null) {
+                mScroller.onAddFavorite();
+            }
         }
+        mUiState.reloadFavorites(mContext);
     }
 
     /**
@@ -458,61 +548,99 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        // Bind the activity to FM audio stream.
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         setVolumeControlStream(AudioManager.STREAM_MUSIC);
-        setContentView(R.layout.main);
-        try {
-            ViewConfiguration config = ViewConfiguration.get(this);
-            Field menuKeyField = ViewConfiguration.class.getDeclaredField("sHasPermanentMenuKey");
-            if (menuKeyField != null) {
-                menuKeyField.setAccessible(true);
-                menuKeyField.setBoolean(config, false);
-            }
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        }
 
         mFragmentManager = getFragmentManager();
         mContext = getApplicationContext();
-
-        initUiComponent();
-        registerButtonClickListener();
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
-        mScroller = (FmScroller) findViewById(R.id.multiscroller);
-        mScroller.initialize();
-        mEventListener = new EventListener() {
-            @Override
-            public void onRename(int frequency) {
-                showRenameDialog(frequency);
-            }
+        mCurrentStation = FmStation.getCurrentStation(mContext);
 
-            @Override
-            public void onRemoveFavorite(int frequency) {
-                // TODO it's on UI thread, change to sub thread
-                if (FmStation.isFavoriteStation(mContext, frequency)) {
-                    FmStation.removeFromFavorite(mContext, frequency);
-                    if (mCurrentStation == frequency) {
-                        mTextStationName.setText(FmStation.getStationName(mContext, frequency));
-                    }
-                    mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_off_selector);
-                    // Notify scroller
-                    mScroller.onRemoveFavorite();
-                }
-            }
+        // Attach Material 3 Expressive Compose UI
+        View composeView = FmMainUiBridge.createPlayerComposeView(this, mUiState);
+        setContentView(composeView);
+        setupUiCallbacks();
+        refreshStationUI(mCurrentStation);
+    }
 
-            @Override
-            public void onPlay(int frequency) {
-                if (frequency != 0 && (mService.getPowerStatus() == FmService.POWER_UP)) {
-                    tuneStation(frequency);
-                }
+    private void setupUiCallbacks() {
+        mUiState.setOnPlayPauseListener(() -> {
+            if (mService != null && mService.getPowerStatus() == FmService.POWER_UP) {
+                powerDownFm();
+            } else {
+                powerUpFm();
             }
-        };
-        mScroller.registerListener(mEventListener);
+        });
+        mUiState.setOnPrevStationListener(() -> {
+            seekStation(mCurrentStation, false);
+        });
+        mUiState.setOnNextStationListener(() -> {
+            seekStation(mCurrentStation, true);
+        });
+        mUiState.setOnTuneDownListener(() -> {
+            tuneStation(FmUtils.computeDecreaseStation(mCurrentStation));
+        });
+        mUiState.setOnTuneUpListener(() -> {
+            tuneStation(FmUtils.computeIncreaseStation(mCurrentStation));
+        });
+        mUiState.setOnFrequencySeekListener(freq -> {
+            int station = FmUtils.computeStation(freq);
+            tuneStation(station);
+        });
+        mUiState.setOnToggleFavoriteListener(() -> {
+            updateFavoriteStation();
+        });
+        mUiState.setOnToggleSpeakerListener(() -> {
+            if (mService != null) {
+                boolean currentSpeaker = mService.isSpeakerUsed();
+                setSpeakerPhoneOn(!currentSpeaker);
+                setMenuItemAudioIcon(!currentSpeaker);
+            }
+        });
+        mUiState.setOnRecordListener(() -> {
+            mUiState.setRecordingSheetVisible(true);
+            mUiState.reloadRecordings(mContext);
+        });
+        mUiState.setOnStartRecordingListener(() -> {
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, PERMISSION_REQUEST_POWER_ON);
+                return;
+            }
+            if (mService != null) {
+                mService.startRecordingAsync();
+            }
+        });
+        mUiState.setOnStopRecordingListener(() -> {
+            if (mService != null) {
+                mService.stopRecordingAsync();
+            }
+        });
+        mUiState.setOnSaveRecordingListener(name -> {
+            if (mService != null) {
+                mService.saveRecordingAsync(name);
+                Toast.makeText(mContext, R.string.toast_record_saved, Toast.LENGTH_SHORT).show();
+                mUiState.reloadRecordings(mContext);
+            }
+        });
+        mUiState.setOnDiscardRecordingListener(() -> {
+            if (mService != null) {
+                mService.saveRecordingAsync(null);
+                Toast.makeText(mContext, R.string.toast_record_not_saved, Toast.LENGTH_SHORT).show();
+            }
+        });
+        mUiState.setOnDeleteRecordingListener(item -> {
+            FmMainUiBridge.deleteRecording(mContext, item);
+            mUiState.reloadRecordings(mContext);
+        });
+        mUiState.setOnStationSelectListener(selectedFreq -> {
+            if (mService != null && mService.getPowerStatus() == FmService.POWER_UP) {
+                tuneStation(selectedFreq);
+            } else {
+                mCurrentStation = selectedFreq;
+                powerUpFm();
+            }
+        });
     }
 
     @Override
@@ -520,9 +648,15 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
         FmStation.updateStationToDb(mContext, stationFreq, name);
         if (mCurrentStation == stationFreq) {
             String stationName = FmStation.getStationName(mContext, mCurrentStation);
-            mTextStationName.setText(stationName);
+            mUiState.setStationName(stationName);
+            if (mTextStationName != null) {
+                mTextStationName.setText(stationName);
+            }
         }
-        mScroller.notifyAdapterChange();
+        mUiState.reloadFavorites(mContext);
+        if (mScroller != null) {
+            mScroller.notifyAdapterChange();
+        }
         String title = getString(R.string.toast_station_renamed);
         FmSnackBar.make(FmMainActivity.this, title, null, null,
                 FmSnackBar.DEFAULT_DURATION).show();
@@ -568,45 +702,64 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             Log.d(TAG, "refreshStationUI, set station value null when it is first time ");
             return;
         }
-        // TODO it's on UI thread, change to sub thread
-        // Change the station frequency displayed.
-        mTextStationValue.setText(FmUtils.formatStation(station));
-        // Show or hide the favorite icon
-        if (FmStation.isFavoriteStation(mContext, station)) {
-            mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_on_selector);
-        } else {
-            mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_off_selector);
+        mCurrentStation = station;
+        mUiState.setFrequency(FmUtils.computeFrequency(station));
+
+        boolean isFav = FmStation.isFavoriteStation(mContext, station);
+        mUiState.setFavorite(isFav);
+        if (mButtonAddToFavorite != null) {
+            mButtonAddToFavorite.setImageResource(isFav ?
+                    R.drawable.btn_fm_favorite_on_selector :
+                    R.drawable.btn_fm_favorite_off_selector);
+        }
+        if (mTextStationValue != null) {
+            mTextStationValue.setText(FmUtils.formatStation(station));
         }
 
-        String stationName = "";
-        String radioText = "";
-        ContentResolver resolver = mContext.getContentResolver();
-        Cursor cursor = null;
-        try {
-            cursor = resolver.query(
-                    Station.CONTENT_URI,
-                    FmStation.COLUMNS,
-                    Station.FREQUENCY + "=?",
-                    new String[] { String.valueOf(mCurrentStation) },
-                    null);
-            if (cursor != null && cursor.moveToFirst()) {
-                // If the station name is not exist, show program service(PS) instead
-                stationName = cursor.getString(cursor.getColumnIndex(Station.STATION_NAME));
-                if (TextUtils.isEmpty(stationName)) {
-                    stationName = cursor.getString(cursor.getColumnIndex(Station.PROGRAM_SERVICE));
+        AsyncTask.THREAD_POOL_EXECUTOR.execute(() -> {
+            String stationName = "";
+            String radioText = "";
+            ContentResolver resolver = mContext.getContentResolver();
+            Cursor cursor = null;
+            try {
+                cursor = resolver.query(
+                        Station.CONTENT_URI,
+                        FmStation.COLUMNS,
+                        Station.FREQUENCY + "=?",
+                        new String[] { String.valueOf(station) },
+                        null);
+                if (cursor != null && cursor.moveToFirst()) {
+                    stationName = cursor.getString(cursor.getColumnIndex(Station.STATION_NAME));
+                    if (TextUtils.isEmpty(stationName)) {
+                        stationName = cursor.getString(cursor.getColumnIndex(Station.PROGRAM_SERVICE));
+                    }
+                    radioText = cursor.getString(cursor.getColumnIndex(Station.RADIO_TEXT));
                 }
-                radioText = cursor.getString(cursor.getColumnIndex(Station.RADIO_TEXT));
+            } catch (Exception e) {
+                Log.e(TAG, "refreshStationUI query error: " + e);
+            } finally {
+                if (cursor != null) {
+                    cursor.close();
+                }
+            }
 
-            } else {
-                Log.d(TAG, "showPlayingNotification, cursor is null");
-            }
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-        mTextStationName.setText(stationName);
-        mTextRds.setText(radioText);
+            final String finalStationName = stationName;
+            final String finalRadioText = radioText;
+            runOnUiThread(() -> {
+                if (mCurrentStation == station) {
+                    mUiState.setStationName(finalStationName);
+                    mUiState.setRadioText(finalRadioText);
+                    mUiState.reloadFavorites(mContext);
+
+                    if (mTextStationName != null) {
+                        mTextStationName.setText(finalStationName);
+                    }
+                    if (mTextRds != null) {
+                        mTextRds.setText(finalRadioText);
+                    }
+                }
+            });
+        });
     }
 
     /**
@@ -648,7 +801,10 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     public void onResume() {
         super.onResume();
         mIsActivityForeground = true;
-        mScroller.onResume();
+        if (mScroller != null) {
+            mScroller.onResume();
+        }
+        mUiState.reloadFavorites(mContext);
         if (null == mService) {
             Log.d(TAG, "onResume, mService is null");
             return;
@@ -670,7 +826,9 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
         if (null != mService) {
             mService.setFmMainActivityForeground(mIsActivityForeground);
         }
-        mScroller.onPause();
+        if (mScroller != null) {
+            mScroller.onPause();
+        }
         super.onPause();
     }
 
@@ -696,17 +854,16 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
      */
     @Override
     public void onDestroy() {
-        // need to call this function because if doesn't do this,after
-        // configuration change will have many instance and recording time
-        // or playing time will not refresh
         // Remove all the handle message
         mHandler.removeCallbacksAndMessages(null);
         if (mService != null) {
             mService.unregisterFmRadioListener(mFmRadioListener);
         }
         mFmRadioListener = null;
-        mScroller.closeAdapterCursor();
-        mScroller.unregisterListener(mEventListener);
+        if (mScroller != null) {
+            mScroller.closeAdapterCursor();
+            mScroller.unregisterListener(mEventListener);
+        }
         super.onDestroy();
     }
 
@@ -781,32 +938,10 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             setSpeakerPhoneOn(true);
             mMenuItemHeadset.setIcon(R.drawable.btn_fm_speaker_selector);
             invalidateOptionsMenu();
-        } else if (itemId == R.id.fm_start_record) {
-            Intent recordIntent = new Intent(this, FmRecordActivity.class);
-            recordIntent.putExtra(FmStation.CURRENT_STATION, mCurrentStation);
-            startActivityForResult(recordIntent, REQUEST_CODE_RECORDING);
-        } else if (itemId == R.id.fm_record_list) {
-            Intent playMusicIntent = new Intent(Intent.ACTION_VIEW);
-            int playlistId = FmRecorder.getPlaylistId(mContext);
-            Bundle extras = new Bundle();
-            extras.putInt("playlist", playlistId);
-            try {
-                playMusicIntent.putExtras(extras);
-                playMusicIntent.setType("vnd.android.cursor.dir/playlist");
-                startActivity(playMusicIntent);
-            } catch (IllegalArgumentException | ActivityNotFoundException e1) {
-                try {
-                    playMusicIntent = new Intent(Intent.ACTION_VIEW);
-                    final Uri uri = Uri.parse("content://" +
-                            "com.android.externalstorage.documents/document/" +
-                            "primary%3A" + Uri.encode(FmRecorder.getFmRecordFolder(mContext)));
-                    playMusicIntent.setDataAndType(uri, "vnd.android.document/directory");
-                    startActivity(playMusicIntent);
-                } catch (ActivityNotFoundException e2) {
-                    // No activity respond
-                    Log.d(TAG,
-                            "onOptionsItemSelected, No activity respond playlist view intent");
-                }
+        } else if (itemId == R.id.fm_start_record || itemId == R.id.fm_record_list) {
+            if (mUiState != null) {
+                mUiState.setRecordingSheetVisible(true);
+                mUiState.reloadRecordings(mContext);
             }
         } else {
             Log.e(TAG, "onOptionsItemSelected, invalid options menu item.");
@@ -884,13 +1019,22 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             }
         }
 
-        // TODO it's on UI thread, change to sub thread
-        if (FmStation.isFavoriteStation(mContext, mCurrentStation)) {
-            mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_on_selector);
-        } else {
-            mButtonAddToFavorite.setImageResource(R.drawable.btn_fm_favorite_off_selector);
+        boolean isFav = FmStation.isFavoriteStation(mContext, mCurrentStation);
+        if (mButtonAddToFavorite != null) {
+            mButtonAddToFavorite.setImageResource(isFav ?
+                    R.drawable.btn_fm_favorite_on_selector :
+                    R.drawable.btn_fm_favorite_off_selector);
         }
-        mTextStationName.setText(FmStation.getStationName(mContext, mCurrentStation));
+        String name = FmStation.getStationName(mContext, mCurrentStation);
+        if (mTextStationName != null) {
+            mTextStationName.setText(name);
+        }
+        if (mUiState != null) {
+            mUiState.setFavorite(isFav);
+            mUiState.setStationName(name);
+            mUiState.reloadFavorites(mContext);
+        }
+        refreshStationUI(mCurrentStation);
     }
 
     /**
@@ -923,6 +1067,9 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
      * Power down FM
      */
     private void powerDownFm() {
+        if (mUiState != null) {
+            mUiState.setSeeking(false);
+        }
         refreshImageButton(false);
         refreshActionMenuItem(false);
         refreshPopupMenuItem(false);
@@ -960,6 +1107,9 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     private void seekStation(final int station, boolean direction) {
         // If the seek AsyncTask has been executed and not canceled, cancel it
         // before start new.
+        if (mUiState != null) {
+            mUiState.setSeeking(true);
+        }
         refreshImageButton(false);
         refreshActionMenuItem(false);
         refreshPopupMenuItem(false);
@@ -968,11 +1118,11 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     }
 
     private void refreshImageButton(boolean enabled) {
-        mButtonDecrease.setEnabled(enabled);
-        mButtonPrevStation.setEnabled(enabled);
-        mButtonNextStation.setEnabled(enabled);
-        mButtonIncrease.setEnabled(enabled);
-        mButtonAddToFavorite.setEnabled(enabled);
+        if (mButtonDecrease != null) mButtonDecrease.setEnabled(enabled);
+        if (mButtonPrevStation != null) mButtonPrevStation.setEnabled(enabled);
+        if (mButtonNextStation != null) mButtonNextStation.setEnabled(enabled);
+        if (mButtonIncrease != null) mButtonIncrease.setEnabled(enabled);
+        if (mButtonAddToFavorite != null) mButtonAddToFavorite.setEnabled(enabled);
     }
 
     // Refresh action menu except power menu
@@ -982,19 +1132,24 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
             // if power down by other app, should disable station list, over
             // menu
             mMenuItemStationlList.setEnabled(enabled);
-            refreshMenuItemAudio(enabled);
         }
+        refreshMenuItemAudio(enabled);
     }
 
     // Refresh play/stop float button
     private void refreshPlayButton(boolean enabled) {
         // action menu
-        boolean isPowerUp = (mService.getPowerStatus() == FmService.POWER_UP);
-        mButtonPlay.setEnabled(enabled);
-        mButtonPlay.setImageResource((isPowerUp
-                ? R.drawable.btn_fm_stop_selector
-                : R.drawable.btn_fm_start_selector));
-        mScroller.refreshPlayIndicator(mCurrentStation, isPowerUp);
+        boolean isPowerUp = (mService != null && mService.getPowerStatus() == FmService.POWER_UP);
+        mUiState.setPlaying(isPowerUp);
+        if (mButtonPlay != null) {
+            mButtonPlay.setEnabled(enabled);
+            mButtonPlay.setImageResource((isPowerUp
+                    ? R.drawable.btn_fm_stop_selector
+                    : R.drawable.btn_fm_start_selector));
+        }
+        if (mScroller != null) {
+            mScroller.refreshPlayIndicator(mCurrentStation, isPowerUp);
+        }
     }
 
     private void refreshPopupMenuItem(boolean enabled) {
@@ -1090,6 +1245,7 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     }
 
     private void setMenuItemAudioIcon(final boolean isSpeakerUsed) {
+        mUiState.setSpeakerUsed(isSpeakerUsed);
         if (null != mMenuItemHeadset) {
             mMenuItemHeadset.setIcon(isSpeakerUsed ?
                     R.drawable.btn_fm_speaker_selector :
@@ -1098,12 +1254,17 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     }
 
     private void refreshMenuItemAudio(final boolean enabled) {
+        boolean canRoute = false;
+        if (mService != null) {
+            canRoute = enabled && (mService.isHeadSetIn() || mService.isBluetoothHeadsetInUse());
+        }
+        mUiState.setAudioRoutingAvailable(canRoute);
         if (null != mMenuItemHeadset) {
             // If BT headset is in use or preferred device for media strategy is neither speaker nor
             // headset (e.g., USB audio headset), need to disable speaker/earphone switching menu.
-            final int preferredDevice = mService.getPreferredDeviceForMediaStrategy();
+            final int preferredDevice = mService != null ? mService.getPreferredDeviceForMediaStrategy() : AudioDeviceInfo.TYPE_UNKNOWN;
             mMenuItemHeadset.setEnabled(enabled &&
-                    mService.isHeadSetIn() &&
+                    (mService != null && mService.isHeadSetIn()) &&
                     (!mService.isBluetoothHeadsetInUse() &&
                      (preferredDevice == AudioDeviceInfo.TYPE_UNKNOWN ||
                       (preferredDevice == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER ||
@@ -1150,95 +1311,102 @@ public class FmMainActivity extends Activity implements FmFavoriteEditDialog.Edi
     }
 
     private void registerButtonClickListener() {
-        mButtonAddToFavorite.setOnClickListener(mButtonClickListener);
-        mButtonDecrease.setOnClickListener(mButtonClickListener);
-        mButtonIncrease.setOnClickListener(mButtonClickListener);
-        mButtonPrevStation.setOnClickListener(mButtonClickListener);
-        mButtonNextStation.setOnClickListener(mButtonClickListener);
-        mButtonPlay.setOnClickListener(mButtonClickListener);
+        if (mButtonAddToFavorite != null) mButtonAddToFavorite.setOnClickListener(mButtonClickListener);
+        if (mButtonDecrease != null) mButtonDecrease.setOnClickListener(mButtonClickListener);
+        if (mButtonIncrease != null) mButtonIncrease.setOnClickListener(mButtonClickListener);
+        if (mButtonPrevStation != null) mButtonPrevStation.setOnClickListener(mButtonClickListener);
+        if (mButtonNextStation != null) mButtonNextStation.setOnClickListener(mButtonClickListener);
+        if (mButtonPlay != null) mButtonPlay.setOnClickListener(mButtonClickListener);
     }
 
     /**
      * play main animation
      */
     private void playMainAnimation() {
-        if (null == mService) {
-            Log.e(TAG, "playMainAnimation, mService is null");
+        if (null == mService || mMainLayout == null) {
             return;
         }
         if (mMainLayout.isShown()) {
-            Log.w(TAG, "playMainAnimation, main layout has already shown");
             return;
         }
-        Animation animation = AnimationUtils.loadAnimation(mContext,
-                R.anim.noeaphone_alpha_out);
-        mNoEarPhoneTxt.startAnimation(animation);
-        mNoHeadsetImgView.startAnimation(animation);
-
-        animation = AnimationUtils.loadAnimation(mContext,
-                R.anim.noeaphone_translate_out);
-        animation.setAnimationListener(new NoHeadsetAlpaOutListener());
-        mNoEarphoneTextLayout.startAnimation(animation);
+        if (mNoEarPhoneTxt != null) {
+            Animation animation = AnimationUtils.loadAnimation(mContext,
+                    R.anim.noeaphone_alpha_out);
+            mNoEarPhoneTxt.startAnimation(animation);
+        }
+        if (mNoHeadsetImgView != null) {
+            Animation animation = AnimationUtils.loadAnimation(mContext,
+                    R.anim.noeaphone_alpha_out);
+            mNoHeadsetImgView.startAnimation(animation);
+        }
+        if (mNoEarphoneTextLayout != null) {
+            Animation animation = AnimationUtils.loadAnimation(mContext,
+                    R.anim.noeaphone_translate_out);
+            animation.setAnimationListener(new NoHeadsetAlpaOutListener());
+            mNoEarphoneTextLayout.startAnimation(animation);
+        }
     }
 
     /**
      * clear main layout animation
      */
     private void cancelMainAnimation() {
-        mNoEarPhoneTxt.clearAnimation();
-        mNoHeadsetImgView.clearAnimation();
-        mNoEarphoneTextLayout.clearAnimation();
+        if (mNoEarPhoneTxt != null) mNoEarPhoneTxt.clearAnimation();
+        if (mNoHeadsetImgView != null) mNoHeadsetImgView.clearAnimation();
+        if (mNoEarphoneTextLayout != null) mNoEarphoneTextLayout.clearAnimation();
     }
 
     /**
      * play change to no headset layout animation
      */
     private void playNoHeadsetAnimation() {
-        if (null == mService) {
-            Log.e(TAG, "playNoHeadsetAnimation, mService is null");
+        if (null == mService || mNoHeadsetLayout == null) {
             return;
         }
         if (mNoHeadsetLayout.isShown()) {
-            Log.w(TAG,"playNoHeadsetAnimation, no headset layout has already shown");
             return;
         }
-        Animation animation = AnimationUtils.loadAnimation(mContext, R.anim.main_alpha_out);
-        mMainLayout.startAnimation(animation);
-        animation.setAnimationListener(new NoHeadsetAlpaInListener());
-        mBtnPlayContainer.startAnimation(animation);
+        if (mMainLayout != null) {
+            Animation animation = AnimationUtils.loadAnimation(mContext, R.anim.main_alpha_out);
+            mMainLayout.startAnimation(animation);
+            animation.setAnimationListener(new NoHeadsetAlpaInListener());
+        }
+        if (mBtnPlayContainer != null) {
+            Animation animation = AnimationUtils.loadAnimation(mContext, R.anim.main_alpha_out);
+            mBtnPlayContainer.startAnimation(animation);
+        }
     }
 
     /**
      * clear no headset layout animation
      */
     private void cancelNoHeadsetAnimation() {
-        mMainLayout.clearAnimation();
-        mBtnPlayContainer.clearAnimation();
+        if (mMainLayout != null) mMainLayout.clearAnimation();
+        if (mBtnPlayContainer != null) mBtnPlayContainer.clearAnimation();
     }
 
     /**
      * change to main layout
      */
     private void changeToMainLayout() {
-        mNoEarphoneTextLayout.setVisibility(View.GONE);
-        mNoHeadsetImgView.setVisibility(View.GONE);
-        mNoHeadsetImgViewWrap.setVisibility(View.GONE);
-        mNoHeadsetLayout.setVisibility(View.GONE);
-        // change to main layout
-        mMainLayout.setVisibility(View.VISIBLE);
-        mBtnPlayContainer.setVisibility(View.VISIBLE);
+        if (mNoEarphoneTextLayout != null) mNoEarphoneTextLayout.setVisibility(View.GONE);
+        if (mNoHeadsetImgView != null) mNoHeadsetImgView.setVisibility(View.GONE);
+        if (mNoHeadsetImgViewWrap != null) mNoHeadsetImgViewWrap.setVisibility(View.GONE);
+        if (mNoHeadsetLayout != null) mNoHeadsetLayout.setVisibility(View.GONE);
+        if (mMainLayout != null) mMainLayout.setVisibility(View.VISIBLE);
+        if (mBtnPlayContainer != null) mBtnPlayContainer.setVisibility(View.VISIBLE);
     }
 
     /**
      * change to no headset layout
      */
     private void changeToNoHeadsetLayout() {
-        mMainLayout.setVisibility(View.GONE);
-        mBtnPlayContainer.setVisibility(View.GONE);
-        mNoEarphoneTextLayout.setVisibility(View.VISIBLE);
-        mNoHeadsetImgView.setVisibility(View.VISIBLE);
-        mNoHeadsetImgViewWrap.setVisibility(View.VISIBLE);
-        mNoHeadsetLayout.setVisibility(View.VISIBLE);
+        if (mMainLayout != null) mMainLayout.setVisibility(View.GONE);
+        if (mBtnPlayContainer != null) mBtnPlayContainer.setVisibility(View.GONE);
+        if (mNoEarphoneTextLayout != null) mNoEarphoneTextLayout.setVisibility(View.VISIBLE);
+        if (mNoHeadsetImgView != null) mNoHeadsetImgView.setVisibility(View.VISIBLE);
+        if (mNoHeadsetImgViewWrap != null) mNoHeadsetImgViewWrap.setVisibility(View.VISIBLE);
+        if (mNoHeadsetLayout != null) mNoHeadsetLayout.setVisibility(View.VISIBLE);
     }
 
     @Override
