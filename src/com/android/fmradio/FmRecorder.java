@@ -32,6 +32,7 @@ import android.os.Environment;
 import android.os.SystemClock;
 import android.os.UserHandle;
 import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.util.Log;
 
@@ -85,6 +86,8 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
     private OnRecorderStateChangedListener mStateListener = null;
     // recorder use for record file
     private MediaRecorder mRecorder;
+    private String mCurrentExtension = RECORDING_FILE_EXTENSION;
+    private String mCurrentMimeType = RECORDING_FILE_TYPE;
 
     /**
      * Start recording the voice of FM, also check the pre-conditions, if not
@@ -124,6 +127,17 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
                 return;
             }
         }
+        String formatPref = FmPreferences.getRecordingFormat(context);
+        int bitratePref = FmPreferences.getRecordingBitrate(context);
+        int outputFormat = MediaRecorder.OutputFormat.THREE_GPP;
+        mCurrentExtension = ".3gpp";
+        mCurrentMimeType = "audio/3gpp";
+        if (FmPreferences.FORMAT_M4A.equalsIgnoreCase(formatPref)) {
+            outputFormat = MediaRecorder.OutputFormat.MPEG_4;
+            mCurrentExtension = ".m4a";
+            mCurrentMimeType = "audio/mp4";
+        }
+
         // create recording temporary file
         long curTime = System.currentTimeMillis();
         Date date = new Date(curTime);
@@ -131,7 +145,7 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
                 Locale.ENGLISH);
         String time = simpleDateFormat.format(date);
         StringBuilder stringBuilder = new StringBuilder();
-        stringBuilder.append(time).append(RECORDING_FILE_EXTENSION);
+        stringBuilder.append(time).append(mCurrentExtension);
         String name = stringBuilder.toString();
         mRecordFile = new File(recordingDir, name);
         try {
@@ -159,10 +173,10 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
             mRecorder.setMaxFileSize(maxFileSize);
             mRecorder.setMaxDuration(0);
             mRecorder.setAudioSource(MediaRecorder.AudioSource.RADIO_TUNER);
-            mRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            mRecorder.setOutputFormat(outputFormat);
             mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
             mRecorder.setAudioSamplingRate(44100);
-            mRecorder.setAudioEncodingBitRate(128000);
+            mRecorder.setAudioEncodingBitRate(bitratePref);
             mRecorder.setAudioChannels(2);
             mRecorder.setOutputFile(mRecordFile.getAbsolutePath());
             mRecorder.prepare();
@@ -247,7 +261,7 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
             return;
         }
 
-        File newRecordFile = new File(mRecordFile.getParent(), newName + RECORDING_FILE_EXTENSION);
+        File newRecordFile = new File(mRecordFile.getParent(), newName + mCurrentExtension);
         boolean succuss = mRecordFile.renameTo(newRecordFile);
         if (succuss) {
             mRecordFile = newRecordFile;
@@ -421,7 +435,7 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
         cv.put(MediaStore.Audio.Media.DATA, mRecordFile.getAbsolutePath());
         cv.put(MediaStore.Audio.Media.DATE_ADDED, (int) (current / 1000));
         cv.put(MediaStore.Audio.Media.DATE_MODIFIED, (int) (modDate / 1000));
-        cv.put(MediaStore.Audio.Media.MIME_TYPE, RECORDING_FILE_TYPE);
+        cv.put(MediaStore.Audio.Media.MIME_TYPE, mCurrentMimeType);
         cv.put(MediaStore.Audio.Media.ARTIST,
                 res.getString(R.string.audio_db_artist_name));
         cv.put(MediaStore.Audio.Media.ALBUM,
@@ -518,6 +532,10 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
     }
 
     public static String getFmRecordFolder(Context ctx) {
+        String customLoc = FmPreferences.getRecordingLocation(ctx);
+        if (!TextUtils.isEmpty(customLoc) && !"FM Recording".equals(customLoc)) {
+            return customLoc;
+        }
         Resources res = ctx.getResources();
         return Environment.DIRECTORY_RECORDINGS + File.separator +
             res.getString(R.string.audio_save_dir_name);

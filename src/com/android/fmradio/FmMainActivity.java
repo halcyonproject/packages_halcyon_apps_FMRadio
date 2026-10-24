@@ -414,7 +414,11 @@ public class FmMainActivity extends ComponentActivity implements FmFavoriteEditD
             mUiState.reloadFavorites(mContext);
             if (!mService.isServiceInited()) {
                 mService.initService(mCurrentStation);
-                powerUpFm();
+                if (FmPreferences.isAutoplayEnabled(mContext)) {
+                    powerUpFm();
+                } else {
+                    mUiState.setPlaying(false);
+                }
             } else {
                 if (mService.isDeviceOpen()) {
                     // tune to station during changing language,we need to tune
