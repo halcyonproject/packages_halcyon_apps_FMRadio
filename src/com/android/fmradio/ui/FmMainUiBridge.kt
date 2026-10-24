@@ -32,6 +32,7 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.platform.ViewCompositionStrategy
+import com.android.fmradio.FmPreferences
 import com.android.fmradio.FmRecorder
 import com.android.fmradio.FmStation
 import com.android.fmradio.FmUtils
@@ -287,6 +288,13 @@ object FmMainUiBridge {
         } catch (e: Exception) {
             // Ignore query errors
         }
+
+        val savedOrder = FmPreferences.getFavoritesOrder(context)
+        if (savedOrder.isNotEmpty()) {
+            val orderMap = savedOrder.withIndex().associate { it.value to it.index }
+            list.sortBy { orderMap[it.frequency] ?: Int.MAX_VALUE }
+        }
+
         return list
     }
 
