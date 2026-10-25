@@ -15,7 +15,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Radio FM</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Telah mencari daripada stesen yang tersedia:</string>
     <string name="toast_cannot_search">Tidak dapat mencari stesen yang tersedia.</string>
     <string name="optmenu_speaker">Pembesar suara</string>
@@ -70,4 +70,12 @@
     <string name="audio_db_album_name">Rakaman FM</string>
     <string name="audio_db_playlist_name">Rakaman FM</string>
     <string name="audio_save_dir_name">Rakaman FM</string>
+
+    <string name="settings">Tetapan</string>
+    <string name="playing_on_headphone">Bermain pada Fon Kepala</string>
+    <string name="playing_on_speaker">Bermain pada Pembesar Suara</string>
+    <string name="stop_recording_dialog_title">Hentikan rakaman?</string>
+    <string name="stop_recording_dialog_message">Menukar stesen akan menghentikan rakaman semasa. Adakah anda mahu meneruskan?</string>
+    <string name="stop_recording_confirm">Henti &amp; Tala</string>
+    <string name="recordings_count_format">%d rakaman</string>
 </resources>

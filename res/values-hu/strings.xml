@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM rádió</string>
+    <string name="app_name">Rádió</string>
     <string name="toast_station_searched">Fogható állomások:</string>
     <string name="toast_cannot_search">Nincs fogható állomás.</string>
     <string name="optmenu_speaker">Hangszóró</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Szünet</string>
     <string name="accessibility_next">Következő</string>
     <string name="accessibility_prev">Előző</string>
+
+    <string name="settings">Beállítások</string>
+    <string name="playing_on_headphone">Lejátszás fejhallgatón</string>
+    <string name="playing_on_speaker">Lejátszás hangszórón</string>
+    <string name="stop_recording_dialog_title">Leállítja a felvételt?</string>
+    <string name="stop_recording_dialog_message">Az állomásváltás leállítja a jelenlegi felvételt. Folytatja?</string>
+    <string name="stop_recording_confirm">Leállítás és hangolás</string>
+    <string name="recordings_count_format">%d felvétel</string>
+    <string name="no_favorite_station">Még nincsenek kedvenc állomások</string>
 </resources>

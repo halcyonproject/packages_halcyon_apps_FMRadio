@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Đài FM</string>
+    <string name="app_name">Đài phát thanh</string>
     <string name="toast_station_searched">Các đài hiện có đã tìm kiếm:</string>
     <string name="toast_cannot_search">Không thể tìm kiếm đài có sẵn.</string>
     <string name="optmenu_speaker">Loa</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">Bài tiếp theo</string>
     <string name="accessibility_prev">Bài trước đó</string>
     <string name="no_favorite_station">Chưa có đài ưa thích nào</string>
+
+    <string name="settings">Cài đặt</string>
+    <string name="playing_on_headphone">Đang phát qua tai nghe</string>
+    <string name="playing_on_speaker">Đang phát qua loa</string>
+    <string name="stop_recording_dialog_title">Dừng ghi âm?</string>
+    <string name="stop_recording_dialog_message">Thay đổi kênh sẽ dừng bản ghi âm hiện tại. Bạn có muốn tiếp tục không?</string>
+    <string name="stop_recording_confirm">Dừng &amp; Chuyển đài</string>
+    <string name="recordings_count_format">%d bản ghi âm</string>
 </resources>

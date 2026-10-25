@@ -26,7 +26,7 @@ import android.os.Handler;
 import android.util.AttributeSet;
 import android.view.View;
 
-import com.android.fmradio.R;
+import com.hlcyn.tuner.R;
 import com.android.fmradio.Utils;
 
 /**

@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Radio FM</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">S-au căutat posturile disponibile:</string>
     <string name="toast_cannot_search">Nu se pot căuta posturile disponibile.</string>
     <string name="optmenu_speaker">Difuzor</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Pauză</string>
     <string name="accessibility_next">Înainte</string>
     <string name="accessibility_prev">Înapoi</string>
+
+    <string name="settings">Setări</string>
+    <string name="playing_on_headphone">Redare în căști</string>
+    <string name="playing_on_speaker">Redare în difuzor</string>
+    <string name="stop_recording_dialog_title">Opriți înregistrarea?</string>
+    <string name="stop_recording_dialog_message">Schimbarea postului va opri înregistrarea curentă. Doriți să continuați?</string>
+    <string name="stop_recording_confirm">Oprire și acordare</string>
+    <string name="recordings_count_format">%d înregistrări</string>
+    <string name="no_favorite_station">Niciun post favorit încă</string>
 </resources>

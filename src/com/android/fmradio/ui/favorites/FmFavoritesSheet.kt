@@ -88,7 +88,7 @@ import androidx.compose.material3.HorizontalDivider
 import com.android.fmradio.FmPreferences
 import com.android.fmradio.FmStation
 import com.android.fmradio.FmUtils
-import com.android.fmradio.R
+import com.hlcyn.tuner.R
 import com.android.fmradio.ui.FavoriteStationItem
 import kotlinx.coroutines.CancellationException
 import java.util.Locale

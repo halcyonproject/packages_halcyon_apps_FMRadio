@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM-радіо</string>
+    <string name="app_name">Радіо</string>
     <string name="toast_station_searched">Знайдено такі доступні радіостанції:</string>
     <string name="toast_cannot_search">Не вдалося знайти доступну радіостанцію.</string>
     <string name="optmenu_speaker">Динамік</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">Наступна</string>
     <string name="accessibility_prev">Попередня</string>
     <string name="no_favorite_station">Поки немає улюблених станцій</string>
+
+    <string name="settings">Налаштування</string>
+    <string name="playing_on_headphone">Відтворення через навушники</string>
+    <string name="playing_on_speaker">Відтворення через динамік</string>
+    <string name="stop_recording_dialog_title">Зупинити запис?</string>
+    <string name="stop_recording_dialog_message">Зміна станції зупинить поточний запис. Продовжити?</string>
+    <string name="stop_recording_confirm">Зупинити і налаштувати</string>
+    <string name="recordings_count_format">%d записів</string>
 </resources>

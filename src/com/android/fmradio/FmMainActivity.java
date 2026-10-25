@@ -57,6 +57,8 @@ import android.widget.Toolbar;
 import androidx.activity.ComponentActivity;
 import androidx.core.view.WindowCompat;
 
+import com.hlcyn.tuner.R;
+
 import com.android.fmradio.FmStation.Station;
 import com.android.fmradio.dialogs.FmFavoriteEditDialog;
 import com.android.fmradio.ui.FmMainUiBridge;
@@ -987,7 +989,7 @@ public class FmMainActivity extends ComponentActivity implements FmFavoriteEditD
                             Intent playMusicIntent = new Intent(Intent.ACTION_VIEW);
                             try {
                                 playMusicIntent.setComponent(new ComponentName(
-                                        "com.android.fmradio.recordings",
+                                        "com.hlcyn.tuner.recordings",
                                         "com.android.fmradio.recordings.PlayRecording"));
                                 playMusicIntent.putExtra("path", playUri.toString());
                                 playMusicIntent.putExtra("type", "audio/mpeg");

@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">‏רדיו FM</string>
+    <string name="app_name">‏רדיו</string>
     <string name="toast_station_searched">תחנות זמינות שנמצאו:</string>
     <string name="toast_cannot_search">לא ניתן למצוא תחנה זמינה.</string>
     <string name="optmenu_speaker">רמקול</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">השהה</string>
     <string name="accessibility_next">הבא</string>
     <string name="accessibility_prev">הקודם</string>
+
+    <string name="settings">הגדרות</string>
+    <string name="playing_on_headphone">משמיע באוזניות</string>
+    <string name="playing_on_speaker">משמיע ברמקול</string>
+    <string name="stop_recording_dialog_title">להפסיק את ההקלטה?</string>
+    <string name="stop_recording_dialog_message">החלפת תחנה תפסיק את ההקלטה הנוכחית. האם להמשיך?</string>
+    <string name="stop_recording_confirm">עצור וכוונון</string>
+    <string name="recordings_count_format">%d הקלטות</string>
+    <string name="no_favorite_station">אין עדיין תחנות מועדפות</string>
 </resources>

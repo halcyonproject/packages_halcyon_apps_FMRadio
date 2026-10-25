@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">‏راديو FM</string>
+    <string name="app_name">‏راديو</string>
     <string name="toast_station_searched">تم البحث عن المحطات المتاحة:</string>
     <string name="toast_cannot_search">لا يمكن البحث عن المحطات المتاحة.</string>
     <string name="optmenu_speaker">السماعة</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">التالي</string>
     <string name="accessibility_prev">السابق</string>
     <string name="no_favorite_station">لا توجد محطات مفضلة بعد</string>
+
+    <string name="settings">الإعدادات</string>
+    <string name="playing_on_headphone">التشغيل عبر سماعات الرأس</string>
+    <string name="playing_on_speaker">التشغيل عبر مكبر الصوت</string>
+    <string name="stop_recording_dialog_title">إيقاف التسجيل؟</string>
+    <string name="stop_recording_dialog_message">سيؤدي تغيير المحطة إلى إيقاف التسجيل الحالي. هل ترغب في المتابعة؟</string>
+    <string name="stop_recording_confirm">إيقاف وتوليف</string>
+    <string name="recordings_count_format">%d تسجيلات</string>
 </resources>

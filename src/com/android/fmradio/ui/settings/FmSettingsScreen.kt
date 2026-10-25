@@ -92,7 +92,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.fmradio.FmPreferences
-import com.android.fmradio.R
+import com.hlcyn.tuner.R
 import kotlinx.coroutines.CancellationException
 import java.util.Locale
 
@@ -301,7 +301,7 @@ fun FmSettingsScreen(
                 SettingsSegmentedClickableRow(
                     icon = Icons.Outlined.Info,
                     title = "Version",
-                    summary = "3.2.0",
+                    summary = "3.2.0 (com.hlcyn.tuner)",
                     onClick = {},
                     shapes = ListItemDefaults.segmentedShapes(0, 3)
                 )

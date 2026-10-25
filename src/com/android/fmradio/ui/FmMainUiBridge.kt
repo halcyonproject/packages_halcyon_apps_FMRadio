@@ -21,6 +21,7 @@ import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
 import android.os.AsyncTask
+import android.os.Environment
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
@@ -37,6 +38,7 @@ import com.android.fmradio.FmRecorder
 import com.android.fmradio.FmStation
 import com.android.fmradio.FmUtils
 import com.android.fmradio.ui.recording.RecordingItem
+import com.hlcyn.tuner.R
 import java.io.File
 
 /**
@@ -302,39 +304,61 @@ object FmMainUiBridge {
     fun loadRecordings(context: Context): List<RecordingItem> {
         val list = mutableListOf<RecordingItem>()
         val seenPaths = mutableSetOf<String>()
+        val audioExtensions = listOf(".3gpp", ".3gp", ".m4a", ".mp3", ".aac", ".wav", ".ogg")
 
+        // 1. Direct filesystem search across configured and standard recording folders
         try {
+            val candidateDirs = mutableSetOf<File>()
+
             val sdcard = FmUtils.getDefaultStoragePath()
             val folder = FmRecorder.getFmRecordFolder(context)
-            val dir = File(sdcard, folder)
-            if (dir.exists() && dir.isDirectory) {
-                val files = dir.listFiles { f ->
-                    f.isFile && (f.name.endsWith(".mp3", ignoreCase = true) ||
-                            f.name.endsWith(".m4a", ignoreCase = true) ||
-                            f.name.endsWith(".aac", ignoreCase = true))
-                }
-                files?.sortedByDescending { it.lastModified() }?.forEach { f ->
-                    val uri = Uri.fromFile(f)
-                    seenPaths.add(f.absolutePath)
-                    list.add(
-                        RecordingItem(
-                            id = f.hashCode().toLong(),
-                            title = f.nameWithoutExtension,
-                            filePath = f.absolutePath,
-                            uri = uri,
-                            durationMs = 0L,
-                            sizeBytes = f.length(),
-                            dateModified = f.lastModified()
-                        )
-                    )
+            if (folder.isNotBlank()) {
+                candidateDirs.add(File(sdcard, folder))
+                candidateDirs.add(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS), folder))
+            }
+
+            val customLoc = FmPreferences.getRecordingLocation(context)
+            if (customLoc.isNotBlank()) {
+                candidateDirs.add(File(sdcard, customLoc))
+                candidateDirs.add(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS), customLoc))
+            }
+
+            // Standard AOSP and device fallback directories
+            candidateDirs.add(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS))
+            candidateDirs.add(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS), "FM recordings"))
+            candidateDirs.add(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS), "FM Recording"))
+            candidateDirs.add(File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RECORDINGS), context.getString(R.string.audio_save_dir_name)))
+            candidateDirs.add(File(Environment.getExternalStorageDirectory(), "FM Recording"))
+            candidateDirs.add(File(Environment.getExternalStorageDirectory(), "Recordings"))
+
+            for (dir in candidateDirs) {
+                if (dir.exists() && dir.isDirectory) {
+                    val files = dir.listFiles { f ->
+                        f.isFile && audioExtensions.any { ext -> f.name.endsWith(ext, ignoreCase = true) }
+                    }
+                    files?.sortedByDescending { it.lastModified() }?.forEach { f ->
+                        if (seenPaths.add(f.absolutePath)) {
+                            list.add(
+                                RecordingItem(
+                                    id = f.hashCode().toLong(),
+                                    title = f.nameWithoutExtension,
+                                    filePath = f.absolutePath,
+                                    uri = Uri.fromFile(f),
+                                    durationMs = 0L,
+                                    sizeBytes = f.length(),
+                                    dateModified = f.lastModified()
+                                )
+                            )
+                        }
+                    }
                 }
             }
         } catch (e: Exception) {
-            Log.e("FmMainUiBridge", "Error listing recording directory: " + e.message)
+            Log.e("FmMainUiBridge", "Error listing recording directories: " + e.message)
         }
 
+        // 2. Query MediaStore for recorded broadcasts and enrich metadata
         try {
-            val folder = FmRecorder.getFmRecordFolder(context)
             val projection = arrayOf(
                 MediaStore.Audio.Media._ID,
                 MediaStore.Audio.Media.TITLE,
@@ -343,8 +367,11 @@ object FmMainUiBridge {
                 MediaStore.Audio.Media.SIZE,
                 MediaStore.Audio.Media.DATE_MODIFIED
             )
-            val selection = "${MediaStore.Audio.Media.DATA} LIKE ?"
-            val selectionArgs = arrayOf("%$folder%")
+            val artistName = context.getString(R.string.audio_db_artist_name)
+            val albumName = context.getString(R.string.audio_db_album_name)
+            val selection = "${MediaStore.Audio.Media.ARTIST} = ? OR ${MediaStore.Audio.Media.ALBUM} = ? OR ${MediaStore.Audio.Media.DATA} LIKE ? OR ${MediaStore.Audio.Media.DATA} LIKE ?"
+            val selectionArgs = arrayOf(artistName, albumName, "%FM recordings%", "%FM Recording%")
+
             context.contentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 projection,
@@ -362,6 +389,8 @@ object FmMainUiBridge {
                     val path = cursor.getString(dataIdx)
                     val id = cursor.getLong(idIdx)
                     val contentUri = ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id)
+                    val duration = cursor.getLong(durIdx)
+
                     if (path != null && seenPaths.contains(path)) {
                         val existingIndex = list.indexOfFirst { it.filePath == path }
                         if (existingIndex >= 0) {
@@ -369,10 +398,10 @@ object FmMainUiBridge {
                             list[existingIndex] = existing.copy(
                                 id = id,
                                 uri = contentUri,
-                                durationMs = cursor.getLong(durIdx)
+                                durationMs = if (duration > 0) duration else existing.durationMs
                             )
                         }
-                    } else if (path != null) {
+                    } else if (path != null && audioExtensions.any { ext -> path.endsWith(ext, ignoreCase = true) }) {
                         seenPaths.add(path)
                         list.add(
                             RecordingItem(
@@ -380,7 +409,7 @@ object FmMainUiBridge {
                                 title = cursor.getString(titleIdx) ?: File(path).nameWithoutExtension,
                                 filePath = path,
                                 uri = contentUri,
-                                durationMs = cursor.getLong(durIdx),
+                                durationMs = duration,
                                 sizeBytes = cursor.getLong(sizeIdx),
                                 dateModified = cursor.getLong(dateIdx) * 1000L
                             )

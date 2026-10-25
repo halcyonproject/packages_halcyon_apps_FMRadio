@@ -27,7 +27,7 @@ import android.widget.Button;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
-import com.android.fmradio.R;
+import com.hlcyn.tuner.R;
 
 /**
  * The view used to display the customized toast

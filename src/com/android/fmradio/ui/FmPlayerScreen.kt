@@ -149,7 +149,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.android.fmradio.FmPreferences
 import com.android.fmradio.FmRecorder
-import com.android.fmradio.R
+import com.hlcyn.tuner.R
 import com.android.fmradio.ui.artwork.StationArtworkGenerator
 import com.android.fmradio.ui.favorites.FmFavoritesSheet
 import com.android.fmradio.ui.recording.FmRecordingsScreen
@@ -195,6 +195,7 @@ fun FmPlayerScreen(
     onStationSelect: (Int) -> Unit,
     onReloadFavorites: () -> Unit = {},
     onDismissRecordingSheet: () -> Unit = {},
+    onOpenRecordings: () -> Unit = onRecordClick,
     onStartRecording: () -> Unit = {},
     onStopRecording: () -> Unit = {},
     onSaveRecording: (String) -> Unit = {},
@@ -617,7 +618,12 @@ fun FmPlayerScreen(
                 onBackClick = {
                     reduceMotion = FmPreferences.isReduceMotionEnabled(context)
                     isSettingsVisible = false
-                }
+                },
+                onOpenRecordings = {
+                    isSettingsVisible = false
+                    onOpenRecordings()
+                },
+                recordingsCount = recordingsList.size
             )
         }
 

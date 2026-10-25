@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM-radio</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Gevonden beschikbare zenders:</string>
     <string name="toast_cannot_search">Kan beschikbare zenders niet vinden.</string>
     <string name="optmenu_speaker">Luidspreker</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Pauzeren</string>
     <string name="accessibility_next">Volgende</string>
     <string name="accessibility_prev">Vorige</string>
+
+    <string name="settings">Instellingen</string>
+    <string name="playing_on_headphone">Afspelen via hoofdtelefoon</string>
+    <string name="playing_on_speaker">Afspelen via luidspreker</string>
+    <string name="stop_recording_dialog_title">Opname stoppen?</string>
+    <string name="stop_recording_dialog_message">Het wijzigen van de zender stopt de huidige opname. Wil je doorgaan?</string>
+    <string name="stop_recording_confirm">Stoppen en afstemmen</string>
+    <string name="recordings_count_format">%d opnames</string>
+    <string name="no_favorite_station">Nog geen favoriete zenders</string>
 </resources>

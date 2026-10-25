@@ -16,7 +16,7 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.android.fmradio.recordings"
+    package="com.hlcyn.tuner.recordings"
     android:versionCode="1"
     android:versionName="1.0">
 
@@ -26,7 +26,7 @@
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 
     <permission
-        android:name="com.android.fmradio.recordings.permission.PLAY_RECORDING"
+        android:name="com.hlcyn.tuner.recordings.permission.PLAY_RECORDING"
         android:protectionLevel="signature" />
 
     <application
@@ -34,14 +34,14 @@
         android:hardwareAccelerated="true">
 
         <activity
-            android:name=".PlayRecording"
+            android:name="com.android.fmradio.recordings.PlayRecording"
             android:exported="true"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
-            android:permission="com.android.fmradio.recordings.permission.PLAY_RECORDING" />
+            android:permission="com.hlcyn.tuner.recordings.permission.PLAY_RECORDING" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.android.fmradio.recordings"
+            android:authorities="com.hlcyn.tuner.recordings"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data

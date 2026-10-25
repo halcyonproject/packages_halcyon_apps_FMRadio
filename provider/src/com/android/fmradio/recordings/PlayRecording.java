@@ -24,6 +24,8 @@ import android.widget.Toast;
 
 import androidx.core.content.FileProvider;
 
+import com.hlcyn.tuner.recordings.R;
+
 import java.io.File;
 
 public class PlayRecording extends Activity {

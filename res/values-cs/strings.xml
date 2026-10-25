@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Rádio FM</string>
+    <string name="app_name">Rádio</string>
     <string name="toast_station_searched">Vyhledané dostupné stanice:</string>
     <string name="toast_cannot_search">Dostupná stanice nebyla nalezena.</string>
     <string name="optmenu_speaker">Reproduktor</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Pozastavit</string>
     <string name="accessibility_next">Další</string>
     <string name="accessibility_prev">Předchozí</string>
+
+    <string name="settings">Nastavení</string>
+    <string name="playing_on_headphone">Přehrávání ve sluchátkách</string>
+    <string name="playing_on_speaker">Přehrávání z reproduktoru</string>
+    <string name="stop_recording_dialog_title">Zastavit nahrávání?</string>
+    <string name="stop_recording_dialog_message">Změnou stanice se aktuální nahrávání zastaví. Chcete pokračovat?</string>
+    <string name="stop_recording_confirm">Zastavit a ladit</string>
+    <string name="recordings_count_format">%d nahrávek</string>
+    <string name="no_favorite_station">Zatím žádné oblíbené stanice</string>
 </resources>

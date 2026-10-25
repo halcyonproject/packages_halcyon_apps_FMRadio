@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM-radio</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Seuraavat käytettävissä olevat kanavat löytyivät:</string>
     <string name="toast_cannot_search">Käytettävissä olevia kanavia ei voi etsiä.</string>
     <string name="optmenu_speaker">Kaiutin</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Pysäytä</string>
     <string name="accessibility_next">Seuraava</string>
     <string name="accessibility_prev">Edellinen</string>
+
+    <string name="settings">Asetukset</string>
+    <string name="playing_on_headphone">Toistetaan kuulokkeista</string>
+    <string name="playing_on_speaker">Toistetaan kaiuttimesta</string>
+    <string name="stop_recording_dialog_title">Lopetetaanko tallennus?</string>
+    <string name="stop_recording_dialog_message">Kanavan vaihtaminen pysäyttää nykyisen tallennuksen. Haluatko jatkaa?</string>
+    <string name="stop_recording_confirm">Lopeta ja viritä</string>
+    <string name="recordings_count_format">%d tallennetta</string>
+    <string name="no_favorite_station">Ei vielä suosikkikanavia</string>
 </resources>

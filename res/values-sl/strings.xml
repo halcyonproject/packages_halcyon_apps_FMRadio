@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Radio FM</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Poiskane razpoložljive postaje:</string>
     <string name="toast_cannot_search">Ni mogoče poiskati razpoložljivih postaj.</string>
     <string name="optmenu_speaker">Zvočnik</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Premor</string>
     <string name="accessibility_next">Naslednja</string>
     <string name="accessibility_prev">Prejšnja</string>
+
+    <string name="settings">Nastavitve</string>
+    <string name="playing_on_headphone">Predvajanje prek slušalk</string>
+    <string name="playing_on_speaker">Predvajanje prek zvočnika</string>
+    <string name="stop_recording_dialog_title">Ustavite snemanje?</string>
+    <string name="stop_recording_dialog_message">Sprememba postaje bo ustavila trenutno snemanje. Ali želite nadaljevati?</string>
+    <string name="stop_recording_confirm">Ustavi in uglasi</string>
+    <string name="recordings_count_format">%d posnetkov</string>
+    <string name="no_favorite_station">Še ni priljubljenih postaj</string>
 </resources>

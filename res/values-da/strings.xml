@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM Radio</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Tilgængelige stationer, der blev fundet:</string>
     <string name="toast_cannot_search">Den tilgængelige station kan ikke findes.</string>
     <string name="optmenu_speaker">Højttaler</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Pause</string>
     <string name="accessibility_next">Næste</string>
     <string name="accessibility_prev">Forrige</string>
+
+    <string name="settings">Indstillinger</string>
+    <string name="playing_on_headphone">Afspiller på hovedtelefoner</string>
+    <string name="playing_on_speaker">Afspiller på højttaler</string>
+    <string name="stop_recording_dialog_title">Stop optagelse?</string>
+    <string name="stop_recording_dialog_message">Hvis du skifter station, stoppes den aktuelle optagelse. Vil du fortsætte?</string>
+    <string name="stop_recording_confirm">Stop og indstil</string>
+    <string name="recordings_count_format">%d optagelser</string>
+    <string name="no_favorite_station">Ingen favoritstationer endnu</string>
 </resources>

@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Radio FM</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Radios disponibles détectées :</string>
     <string name="toast_cannot_search">Impossible de rechercher les radios disponibles.</string>
     <string name="optmenu_speaker">Haut-parleur</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">Suivant</string>
     <string name="accessibility_prev">Précédent</string>
     <string name="no_favorite_station">Aucune station favorite pour le moment</string>
+
+    <string name="settings">Paramètres</string>
+    <string name="playing_on_headphone">Lecture sur casque</string>
+    <string name="playing_on_speaker">Lecture sur haut-parleur</string>
+    <string name="stop_recording_dialog_title">Arrêter l\'enregistrement ?</string>
+    <string name="stop_recording_dialog_message">Changer de station arrêtera l\'enregistrement en cours. Voulez-vous continuer ?</string>
+    <string name="stop_recording_confirm">Arrêter et changer</string>
+    <string name="recordings_count_format">%d enregistrements</string>
 </resources>

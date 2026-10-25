@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Ραδιόφωνο FM</string>
+    <string name="app_name">Ραδιόφωνο</string>
     <string name="toast_station_searched">Αναζήτηση διαθέσιμων σταθμών:</string>
     <string name="toast_cannot_search">Δεν είναι δυνατή η αναζήτηση διαθέσιμου σταθμού.</string>
     <string name="optmenu_speaker">Ηχείο</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Παύση</string>
     <string name="accessibility_next">Επόμενο</string>
     <string name="accessibility_prev">Προηγούμενο</string>
+
+    <string name="settings">Ρυθμίσεις</string>
+    <string name="playing_on_headphone">Αναπαραγωγή στα ακουστικά</string>
+    <string name="playing_on_speaker">Αναπαραγωγή στο ηχείο</string>
+    <string name="stop_recording_dialog_title">Διακοπή εγγραφής;</string>
+    <string name="stop_recording_dialog_message">Η αλλαγή σταθμού θα διακόψει την τρέχουσα εγγραφή. Θέλετε να συνεχίσετε;</string>
+    <string name="stop_recording_confirm">Διακοπή &amp; Συντονισμός</string>
+    <string name="recordings_count_format">%d εγγραφές</string>
+    <string name="no_favorite_station">Δεν υπάρχουν αγαπημένοι σταθμοί ακόμα</string>
 </resources>

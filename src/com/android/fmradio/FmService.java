@@ -76,6 +76,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 
+import com.hlcyn.tuner.R;
+
 import com.android.fmradio.FmStation.Station;
 
 import java.util.ArrayList;

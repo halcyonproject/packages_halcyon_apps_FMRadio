@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM रेडियो</string>
+    <string name="app_name">रेडियो</string>
     <string name="toast_station_searched">उपलब्ध स्टेशन खोजे गए:</string>
     <string name="toast_cannot_search">उपलब्ध स्टेशन नहीं खोज सकते.</string>
     <string name="optmenu_speaker">स्‍पीकर</string>
@@ -71,4 +71,12 @@
     <string name="audio_db_album_name">एफएम रिकॉर्डिंग</string>
     <string name="audio_db_playlist_name">एफएम रिकॉर्डिंग</string>
     <string name="audio_save_dir_name">एफएम रिकॉर्डिंग</string>
+
+    <string name="settings">सेटिंग्स</string>
+    <string name="playing_on_headphone">हेडफ़ोन पर बज रहा है</string>
+    <string name="playing_on_speaker">स्पीकर पर बज रहा है</string>
+    <string name="stop_recording_dialog_title">रिकॉर्डिंग रोकें?</string>
+    <string name="stop_recording_dialog_message">स्टेशन बदलने से वर्तमान रिकॉर्डिंग रुक जाएगी। क्या आप जारी रखना चाहते हैं?</string>
+    <string name="stop_recording_confirm">रोकें और ट्यून करें</string>
+    <string name="recordings_count_format">%d रिकॉर्डिंग</string>
 </resources>

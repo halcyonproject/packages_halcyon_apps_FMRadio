@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">UKW-Radio</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Verfügbare Sender gefunden:</string>
     <string name="toast_cannot_search">Verfügbarer Sender konnte nicht gefunden werden</string>
     <string name="optmenu_speaker">Lautsprecher</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">Weiter</string>
     <string name="accessibility_prev">Vorheriger Titel</string>
     <string name="no_favorite_station">Noch keine Lieblingssender</string>
+
+    <string name="settings">Einstellungen</string>
+    <string name="playing_on_headphone">Wiedergabe über Kopfhörer</string>
+    <string name="playing_on_speaker">Wiedergabe über Lautsprecher</string>
+    <string name="stop_recording_dialog_title">Aufnahme beenden?</string>
+    <string name="stop_recording_dialog_message">Durch das Wechseln des Senders wird die aktuelle Aufnahme beendet. Möchten Sie fortfahren?</string>
+    <string name="stop_recording_confirm">Beenden &amp; Wechseln</string>
+    <string name="recordings_count_format">%d Aufnahmen</string>
 </resources>

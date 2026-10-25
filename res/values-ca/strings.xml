@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Ràdio FM</string>
+    <string name="app_name">Ràdio</string>
     <string name="toast_station_searched">S\'han trobat les emissores disponibles següents:</string>
     <string name="toast_cannot_search">No es poden cercar les emissores disponibles.</string>
     <string name="optmenu_speaker">Altaveu</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Pausa</string>
     <string name="accessibility_next">Següent</string>
     <string name="accessibility_prev">Anterior</string>
+
+    <string name="settings">Configuració</string>
+    <string name="playing_on_headphone">Reproduint als auriculars</string>
+    <string name="playing_on_speaker">Reproduint a l\'altaveu</string>
+    <string name="stop_recording_dialog_title">Aturar la gravació?</string>
+    <string name="stop_recording_dialog_message">Canviar d\'emissora aturarà la gravació actual. Voleu continuar?</string>
+    <string name="stop_recording_confirm">Atura i sintonitza</string>
+    <string name="recordings_count_format">%d enregistraments</string>
+    <string name="no_favorite_station">Encara no hi ha cap emissora preferida</string>
 </resources>

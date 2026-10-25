@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">Radio FM</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Stasiun radio yang saat ini tersedia:</string>
     <string name="toast_cannot_search">Gagal mencari stasiun radio yang tersedia.</string>
     <string name="optmenu_speaker">Speaker</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">Berikutnya</string>
     <string name="accessibility_prev">Sebelumnya</string>
     <string name="no_favorite_station">Belum ada stasiun favorit</string>
+
+    <string name="settings">Setelan</string>
+    <string name="playing_on_headphone">Memutar di Headphone</string>
+    <string name="playing_on_speaker">Memutar di Speaker</string>
+    <string name="stop_recording_dialog_title">Hentikan rekaman?</string>
+    <string name="stop_recording_dialog_message">Mengubah stasiun akan menghentikan rekaman saat ini. Lanjutkan?</string>
+    <string name="stop_recording_confirm">Hentikan &amp; Setel</string>
+    <string name="recordings_count_format">%d rekaman</string>
 </resources>

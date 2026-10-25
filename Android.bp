@@ -13,7 +13,7 @@
 // limitations under the License.
 
 android_app {
-    name: "RevampedFMRadio",
+    name: "FMTuner",
 
     srcs: [
         "src/**/*.java",
@@ -21,14 +21,17 @@ android_app {
     ],
     resource_dirs: ["res"],
 
-    overrides: ["FMRadio"],
+    overrides: [
+        "FMRadio",
+        "RevampedFMRadio",
+    ],
 
     certificate: "platform",
     platform_apis: true,
     privileged: true,
 
     required: [
-        "privapp_whitelist_com.android.fmradio_revamped.xml",
+        "privapp_whitelist_com.hlcyn.tuner.xml",
         "RevampedFmRecordingsProvider",
     ],
 
@@ -54,8 +57,8 @@ android_app {
 }
 
 prebuilt_etc {
-    name: "privapp_whitelist_com.android.fmradio_revamped.xml",
-    src: "privapp_whitelist_com.android.fmradio.xml",
+    name: "privapp_whitelist_com.hlcyn.tuner.xml",
+    src: "privapp_whitelist_com.hlcyn.tuner.xml",
     sub_dir: "permissions",
     system_ext_specific: false,
 }

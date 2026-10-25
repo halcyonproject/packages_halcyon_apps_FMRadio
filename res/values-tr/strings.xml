@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM Radyo</string>
+    <string name="app_name">Radyo</string>
     <string name="toast_station_searched">Kullanılabilir istasyonlar arandı:</string>
     <string name="toast_cannot_search">Kullanılabilir istasyonlar aranamıyor.</string>
     <string name="optmenu_speaker">Hoparlör</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">Sonraki</string>
     <string name="accessibility_prev">Önceki</string>
     <string name="no_favorite_station">Henüz favori istasyon yok</string>
+
+    <string name="settings">Ayarlar</string>
+    <string name="playing_on_headphone">Kulaklıkta çalınıyor</string>
+    <string name="playing_on_speaker">Hoparlörde çalınıyor</string>
+    <string name="stop_recording_dialog_title">Kayıt durdurulsun mu?</string>
+    <string name="stop_recording_dialog_message">İstasyonun değiştirilmesi mevcut kaydı durduracaktır. Devam etmek istiyor musunuz?</string>
+    <string name="stop_recording_confirm">Durdur ve Ayarla</string>
+    <string name="recordings_count_format">%d kayıt</string>
 </resources>

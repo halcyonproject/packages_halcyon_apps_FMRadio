@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM Radio</string>
+    <string name="app_name">라디오</string>
     <string name="toast_station_searched">청취 가능한 채널을 찾았습니다.</string>
     <string name="toast_cannot_search">청취 가능한 채널을 찾을 수 없습니다.</string>
     <string name="optmenu_speaker">스피커</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">다음</string>
     <string name="accessibility_prev">이전</string>
     <string name="no_favorite_station">아직 즐겨찾는 방송국이 없습니다</string>
+
+    <string name="settings">설정</string>
+    <string name="playing_on_headphone">헤드폰으로 재생 중</string>
+    <string name="playing_on_speaker">스피커로 재생 중</string>
+    <string name="stop_recording_dialog_title">녹음을 중지하시겠습니까?</string>
+    <string name="stop_recording_dialog_message">방송국을 변경하면 현재 녹음이 중지됩니다. 계속하시겠습니까?</string>
+    <string name="stop_recording_confirm">중지 및 이동</string>
+    <string name="recordings_count_format">%d개 녹음</string>
 </resources>

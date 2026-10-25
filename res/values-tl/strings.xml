@@ -15,7 +15,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM na Radyo</string>
+    <string name="app_name">Radyo</string>
     <string name="toast_station_searched">Naghanap ng mga available na istasyon:</string>
     <string name="toast_cannot_search">Hindi maaaring maghanap ng available na istasyon</string>
     <string name="optmenu_speaker">Speaker</string>
@@ -70,4 +70,12 @@
     <string name="audio_db_album_name">Mga recording ng FM</string>
     <string name="audio_db_playlist_name">Mga recording ng FM</string>
     <string name="audio_save_dir_name">Mga recording ng FM</string>
+
+    <string name="settings">Mga Setting</string>
+    <string name="playing_on_headphone">Nagpe-play sa Headphone</string>
+    <string name="playing_on_speaker">Nagpe-play sa Speaker</string>
+    <string name="stop_recording_dialog_title">Ihinto ang pag-record?</string>
+    <string name="stop_recording_dialog_message">Ang pagpapalit ng istasyon ay magpapatigil sa kasalukuyang recording. Nais mo bang magpatuloy?</string>
+    <string name="stop_recording_confirm">Ihinto at I-tune</string>
+    <string name="recordings_count_format">%d mga recording</string>
 </resources>

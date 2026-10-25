@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FMラジオ</string>
+    <string name="app_name">ラジオ</string>
     <string name="toast_station_searched">利用可能な放送局が見つかりました:</string>
     <string name="toast_cannot_search">利用可能な放送局が見つかりません。</string>
     <string name="optmenu_speaker">スピーカー</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">次へ</string>
     <string name="accessibility_prev">前へ</string>
     <string name="no_favorite_station">お気に入りのラジオ局はまだありません</string>
+
+    <string name="settings">設定</string>
+    <string name="playing_on_headphone">ヘッドフォンで再生中</string>
+    <string name="playing_on_speaker">スピーカーで再生中</string>
+    <string name="stop_recording_dialog_title">録音を停止しますか？</string>
+    <string name="stop_recording_dialog_message">ステーションを変更すると、現在の録音が停止します。続行しますか？</string>
+    <string name="stop_recording_confirm">停止して選局</string>
+    <string name="recordings_count_format">%d 件の録音</string>
 </resources>

@@ -41,7 +41,7 @@ import android.widget.TextView;
 import java.text.DecimalFormat;
 import java.util.Locale;
 
-import com.android.fmradio.R;
+import com.hlcyn.tuner.R;
 
 /**
  * This class provider interface to compute station and frequency, get project

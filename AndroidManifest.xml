@@ -16,7 +16,7 @@
 -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.android.fmradio"
+    package="com.hlcyn.tuner"
     android:sharedUserId="android.uid.system"
     android:versionCode="7"
     android:versionName="3.2.0" >
@@ -42,8 +42,10 @@
     <uses-permission android:name="android.permission.MOUNT_UNMOUNT_FILESYSTEMS" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="com.android.fmradio.recordings.permission.PLAY_RECORDING" />
+    <uses-permission android:name="com.hlcyn.tuner.recordings.permission.PLAY_RECORDING" />
 
     <application
         android:hardwareAccelerated="true"
@@ -53,7 +55,7 @@
         android:enableOnBackInvokedCallback="true" >
 
         <activity
-            android:name=".FmMainActivity"
+            android:name="com.android.fmradio.FmMainActivity"
             android:label="@string/app_name"
             android:launchMode="standard"
             android:theme="@style/AppThemeMain"
@@ -65,7 +67,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".FmFavoriteActivity"
+            android:name="com.android.fmradio.FmFavoriteActivity"
             android:configChanges="screenSize"
             android:label="@string/station_title"
             android:launchMode="singleTask"
@@ -74,22 +76,23 @@
         </activity>
 
         <service
-            android:name=".FmService"
+            android:name="com.android.fmradio.FmService"
             android:foregroundServiceType="mediaPlayback"
             android:exported="false" >
             <intent-filter>
+                <action android:name="com.hlcyn.tuner.IFmRadioService" />
                 <action android:name="com.android.fmradio.IFmRadioService" />
             </intent-filter>
         </service>
 
         <provider
-            android:name=".FmProvider"
-            android:authorities="com.android.fmradio"
+            android:name="com.android.fmradio.FmProvider"
+            android:authorities="com.hlcyn.tuner"
             android:exported="false" >
         </provider>
 
         <activity
-            android:name=".FmRecordActivity"
+            android:name="com.android.fmradio.FmRecordActivity"
             android:label="@string/record_title"
             android:theme="@style/AppThemeMain.WithTitle"
             android:launchMode="singleTask" >

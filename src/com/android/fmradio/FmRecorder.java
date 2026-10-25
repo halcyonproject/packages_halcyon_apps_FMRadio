@@ -36,6 +36,8 @@ import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.util.Log;
 
+import com.hlcyn.tuner.R;
+
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;

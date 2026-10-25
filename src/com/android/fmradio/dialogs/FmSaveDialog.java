@@ -36,7 +36,7 @@ import android.widget.Toast;
 
 import com.android.fmradio.FmRecorder;
 import com.android.fmradio.FmService;
-import com.android.fmradio.R;
+import com.hlcyn.tuner.R;
 
 import java.io.File;
 

@@ -69,7 +69,7 @@ import android.widget.TextView;
 import com.android.fmradio.FmStation;
 import com.android.fmradio.FmUtils;
 import com.android.fmradio.Utils;
-import com.android.fmradio.R;
+import com.hlcyn.tuner.R;
 import com.android.fmradio.FmStation.Station;
 
 import androidx.cardview.widget.CardView;

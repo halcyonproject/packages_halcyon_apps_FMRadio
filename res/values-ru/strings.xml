@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM-радио</string>
+    <string name="app_name">Радио</string>
     <string name="toast_station_searched">Доступные радиостанции:</string>
     <string name="toast_cannot_search">Нет доступных станций</string>
     <string name="optmenu_speaker">Динамик</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">След.</string>
     <string name="accessibility_prev">Предыдущий</string>
     <string name="no_favorite_station">Пока нет любимых радиостанций</string>
+
+    <string name="settings">Настройки</string>
+    <string name="playing_on_headphone">Воспроизведение через наушники</string>
+    <string name="playing_on_speaker">Воспроизведение через динамик</string>
+    <string name="stop_recording_dialog_title">Остановить запись?</string>
+    <string name="stop_recording_dialog_message">Переключение станции остановит текущую запись. Продолжить?</string>
+    <string name="stop_recording_confirm">Остановить и настроить</string>
+    <string name="recordings_count_format">%d записей</string>
 </resources>

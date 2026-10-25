@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM ரேடியோ</string>
+    <string name="app_name">ரேடியோ</string>
     <string name="toast_station_searched">கிடைக்கும் நிலையங்கள்:</string>
     <string name="toast_cannot_search">கிடைக்கும் நிலையத்தைத் தேட முடியவில்லை.</string>
     <string name="optmenu_speaker">ஸ்பீக்கர்</string>
@@ -66,4 +66,13 @@
     <string name="accessibility_pause">இடைநிறுத்து</string>
     <string name="accessibility_next">அடுத்து</string>
     <string name="accessibility_prev">முந்தையது</string>
+
+    <string name="settings">Settings</string>
+    <string name="playing_on_headphone">Playing on Headphone</string>
+    <string name="playing_on_speaker">Playing on Speaker</string>
+    <string name="stop_recording_dialog_title">Stop recording?</string>
+    <string name="stop_recording_dialog_message">Changing the station will stop the current recording. Do you want to continue?</string>
+    <string name="stop_recording_confirm">Stop &amp; Tune</string>
+    <string name="recordings_count_format">%d recordings</string>
+    <string name="no_favorite_station">No favorite stations yet</string>
 </resources>

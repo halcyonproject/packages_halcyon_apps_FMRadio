@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM-radio</string>
+    <string name="app_name">Radio</string>
     <string name="toast_station_searched">Tillgängliga kanaler som har hittats:</string>
     <string name="toast_cannot_search">Det går inte att söka efter tillgängliga kanaler.</string>
     <string name="optmenu_speaker">Högtalare</string>
@@ -70,4 +70,13 @@
     <string name="accessibility_pause">Pausa</string>
     <string name="accessibility_next">Nästa</string>
     <string name="accessibility_prev">Föregående</string>
+
+    <string name="settings">Inställningar</string>
+    <string name="playing_on_headphone">Spelar i hörlurar</string>
+    <string name="playing_on_speaker">Spelar i högtalare</string>
+    <string name="stop_recording_dialog_title">Stoppa inspelning?</string>
+    <string name="stop_recording_dialog_message">Om du byter kanal stoppas den aktuella inspelningen. Vill du fortsätta?</string>
+    <string name="stop_recording_confirm">Stoppa och ställ in</string>
+    <string name="recordings_count_format">%d inspelningar</string>
+    <string name="no_favorite_station">Inga favoritkanaler än</string>
 </resources>

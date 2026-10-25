@@ -15,7 +15,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">‏رادیو FM</string>
+    <string name="app_name">‏رادیو</string>
     <string name="toast_station_searched">جستجوی ایستگاه‌های در دسترس:</string>
     <string name="toast_cannot_search">نمی‌توان ایستگاه در دسترس را جستجو کرد.</string>
     <string name="optmenu_speaker">بلندگو</string>
@@ -64,4 +64,13 @@
     <string name="accessibility_play">پخش</string>
     <string name="accessibility_pause">مکث</string>
     <string name="accessibility_next">بعدی</string>
+
+    <string name="settings">تنظیمات</string>
+    <string name="playing_on_headphone">پخش در هدفون</string>
+    <string name="playing_on_speaker">پخش در بلندگو</string>
+    <string name="stop_recording_dialog_title">توقف ضبط؟</string>
+    <string name="stop_recording_dialog_message">تغییر ایستگاه، ضبط فعلی را متوقف می‌کند. آیا ادامه می‌دهید؟</string>
+    <string name="stop_recording_confirm">توقف و تنظیم</string>
+    <string name="recordings_count_format">%d ضبط</string>
+    <string name="no_favorite_station">هنوز ایستگاه برگزیده‌ای وجود ندارد</string>
 </resources>

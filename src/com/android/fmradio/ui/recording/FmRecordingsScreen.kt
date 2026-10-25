@@ -111,7 +111,7 @@ import androidx.compose.foundation.background
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import com.android.fmradio.R
+import com.hlcyn.tuner.R
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import java.io.File

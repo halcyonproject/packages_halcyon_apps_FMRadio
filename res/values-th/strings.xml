@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">วิทยุ FM</string>
+    <string name="app_name">วิทยุ</string>
     <string name="toast_station_searched">สถานีวิทยุที่พบ:</string>
     <string name="toast_cannot_search">ไม่พบสถานีที่พร้อมใช้งาน</string>
     <string name="optmenu_speaker">ลำโพง</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">ถัดไป</string>
     <string name="accessibility_prev">ก่อนหน้า</string>
     <string name="no_favorite_station">ยังไม่มีสถานีโปรด</string>
+
+    <string name="settings">การตั้งค่า</string>
+    <string name="playing_on_headphone">กำลังเล่นผ่านหูฟัง</string>
+    <string name="playing_on_speaker">กำลังเล่นผ่านลำโพง</string>
+    <string name="stop_recording_dialog_title">หยุดการบันทึกหรือไม่?</string>
+    <string name="stop_recording_dialog_message">การเปลี่ยนสถานีจะหยุดการบันทึกปัจจุบัน คุณต้องการดำเนินการต่อหรือไม่?</string>
+    <string name="stop_recording_confirm">หยุดและจูน</string>
+    <string name="recordings_count_format">%d การบันทึก</string>
 </resources>

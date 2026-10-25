@@ -16,7 +16,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">FM 收音機</string>
+    <string name="app_name">收音機</string>
     <string name="toast_station_searched">搜尋到可收聽的電台：</string>
     <string name="toast_cannot_search">搜尋不到可收聽的電台。</string>
     <string name="optmenu_speaker">喇叭</string>
@@ -71,4 +71,12 @@
     <string name="accessibility_next">下一首</string>
     <string name="accessibility_prev">上一首</string>
     <string name="no_favorite_station">尚無收藏的電台</string>
+
+    <string name="settings">設定</string>
+    <string name="playing_on_headphone">耳機播放中</string>
+    <string name="playing_on_speaker">喇叭播放中</string>
+    <string name="stop_recording_dialog_title">停止錄音？</string>
+    <string name="stop_recording_dialog_message">切換電台將會停止當前錄音。是否要繼續？</string>
+    <string name="stop_recording_confirm">停止並切換</string>
+    <string name="recordings_count_format">%d 個錄音</string>
 </resources>
