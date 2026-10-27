@@ -44,8 +44,10 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import kotlin.math.roundToInt
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.basicMarquee
@@ -67,6 +69,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -88,6 +91,7 @@ import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Speaker
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -104,6 +108,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -122,12 +127,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
@@ -233,125 +241,121 @@ fun FmPlayerScreen(
         label = "entrance_offset"
     )
 
-    // Dynamic Variable Font State Definitions (wght, wdth, slnt, ROND 100)
-    @OptIn(ExperimentalTextApi::class)
-    val pausedTitleFont = remember {
-        FontFamily(
-            Font(
-                familyName = DeviceFontFamilyName("google-sans-flex"),
-                weight = FontWeight.Normal,
-                variationSettings = FontVariation.Settings(
-                    FontVariation.Setting("wght", 400f),
-                    FontVariation.Setting("wdth", 100f),
-                    FontVariation.Setting("slnt", 0f),
-                    FontVariation.Setting("ROND", 100f)
-                )
-            )
-        )
+    // Dynamic Variable Font State Definitions with smooth, granular spring transitions
+    val targetWght = when {
+        reduceMotion -> 700f
+        isRecording -> 700f
+        isSeeking -> 800f
+        isScrubbing -> 750f
+        isPlaying -> 700f
+        else -> 400f
     }
 
-    @OptIn(ExperimentalTextApi::class)
-    val playedTitleFont = remember {
-        FontFamily(
-            Font(
-                familyName = DeviceFontFamilyName("google-sans-flex"),
-                weight = FontWeight.Bold,
-                variationSettings = FontVariation.Settings(
-                    FontVariation.Setting("wght", 700f),
-                    FontVariation.Setting("wdth", 135f),
-                    FontVariation.Setting("slnt", 0f),
-                    FontVariation.Setting("ROND", 100f)
-                )
-            )
-        )
+    // Breathing width animation: oscillates between 100f and 135f
+    val breathingTransition = rememberInfiniteTransition(label = "title_breathing")
+    val breathingWdth by breathingTransition.animateFloat(
+        initialValue = 100f,
+        targetValue = 135f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breathing_wdth"
+    )
+
+    // When scrubbing manually via the bar, breathing is paused (held at rest width 117.5f)
+    val targetWdth = when {
+        reduceMotion -> if (isPlaying || isRecording) 135f else if (isScrubbing || isSeeking) 117.5f else 100f
+        isSeeking -> breathingWdth
+        isScrubbing -> 117.5f
+        isPlaying || isRecording -> 135f
+        else -> 100f
     }
 
-    @OptIn(ExperimentalTextApi::class)
-    val recordingTitleFont = remember {
-        FontFamily(
-            Font(
-                familyName = DeviceFontFamilyName("google-sans-flex"),
-                weight = FontWeight.Bold,
-                variationSettings = FontVariation.Settings(
-                    FontVariation.Setting("wght", 700f),
-                    FontVariation.Setting("wdth", 135f),
-                    FontVariation.Setting("slnt", -10f),
-                    FontVariation.Setting("ROND", 100f)
-                )
-            )
-        )
-    }
+    val targetSlnt = if (isRecording && !reduceMotion) -10f else 0f
 
-    // 15-step quantized breathing list (wght 800, breathing wdth 100..135, slnt 0, ROND 100)
+    // Critically damped spring physics for smooth, non-bouncy font transitions across every state
+    val animWght by animateFloatAsState(
+        targetValue = targetWght,
+        animationSpec = if (reduceMotion) snap() else spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "anim_wght"
+    )
+
+    val animWdth by animateFloatAsState(
+        targetValue = targetWdth,
+        animationSpec = if (reduceMotion) snap() else spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "anim_wdth"
+    )
+
+    val animSlnt by animateFloatAsState(
+        targetValue = targetSlnt,
+        animationSpec = if (reduceMotion) snap() else spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "anim_slnt"
+    )
+
+    // Quantize animated axes to fine steps to enable efficient font caching without jitter
+    val qWght = (animWght / 10f).roundToInt() * 10f
+    val qWdth = (animWdth / 2.5f).roundToInt() * 2.5f
+    val qSlnt = (animSlnt / 2.5f).roundToInt() * 2.5f
+
     @OptIn(ExperimentalTextApi::class)
-    val breathingTitleFonts = remember {
-        (0..14).map { step ->
-            val width = 100f + step * 2.5f
+    val fontCache = remember { mutableMapOf<Triple<Float, Float, Float>, FontFamily>() }
+    @OptIn(ExperimentalTextApi::class)
+    val currentTitleFont = if (reduceMotion) {
+        remember {
             FontFamily(
                 Font(
                     familyName = DeviceFontFamilyName("google-sans-flex"),
-                    weight = FontWeight.ExtraBold,
                     variationSettings = FontVariation.Settings(
-                        FontVariation.Setting("wght", 800f),
-                        FontVariation.Setting("wdth", width),
+                        FontVariation.Setting("wght", 700f),
+                        FontVariation.Setting("wdth", 117.5f),
                         FontVariation.Setting("slnt", 0f),
                         FontVariation.Setting("ROND", 100f)
                     )
                 )
             )
         }
-    }
-
-    // Asynchronously pre-warm TypefaceRequestCache to eliminate any font load flicker
-    val fontResolver = LocalFontFamilyResolver.current
-    LaunchedEffect(Unit) {
-        withContext(Dispatchers.Default) {
-            fontResolver.resolve(pausedTitleFont)
-            fontResolver.resolve(playedTitleFont)
-            fontResolver.resolve(recordingTitleFont)
-            breathingTitleFonts.forEach { fontResolver.resolve(it) }
+    } else {
+        remember(qWght, qWdth, qSlnt) {
+            fontCache.getOrPut(Triple(qWght, qWdth, qSlnt)) {
+                FontFamily(
+                    Font(
+                        familyName = DeviceFontFamilyName("google-sans-flex"),
+                        variationSettings = FontVariation.Settings(
+                            FontVariation.Setting("wght", qWght),
+                            FontVariation.Setting("wdth", qWdth),
+                            FontVariation.Setting("slnt", qSlnt),
+                            FontVariation.Setting("ROND", 100f)
+                        )
+                    )
+                )
+            }
         }
     }
 
-    val isScrubbingOrSeeking = isScrubbing || isSeeking
-    val breathingTransition = rememberInfiniteTransition(label = "title_breathing")
-    val breathingStep by breathingTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 14f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "breathing_step"
-    )
-
-    val currentBreathingFont = if (reduceMotion) {
-        breathingTitleFonts[7] // static wdth 117.5f
-    } else {
-        breathingTitleFonts[breathingStep.roundToInt().coerceIn(0, 14)]
-    }
-
-    val currentTitleFont = when {
-        isRecording -> recordingTitleFont
-        isScrubbingOrSeeking -> currentBreathingFont
-        isPlaying -> playedTitleFont
-        else -> pausedTitleFont
-    }
-
-    // Tactile Spring RenderNode Physics between interactions
+    // Smooth, non-bouncy tactile scale physics
     val fontScaleX by animateFloatAsState(
-        targetValue = if (reduceMotion) 1f else if (isScrubbingOrSeeking) 1.06f else if (isPlaying) 1.02f else 0.98f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+        targetValue = if (reduceMotion) 1f else if (isScrubbing || isSeeking) 1.02f else if (isPlaying) 1.0f else 0.98f,
+        animationSpec = if (reduceMotion) snap() else spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "font_scale_x"
     )
     val fontScaleY by animateFloatAsState(
-        targetValue = if (reduceMotion) 1f else if (isScrubbingOrSeeking) 1.03f else if (isPlaying) 1.01f else 0.99f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+        targetValue = if (reduceMotion) 1f else if (isScrubbing || isSeeking) 1.02f else if (isPlaying) 1.0f else 0.98f,
+        animationSpec = if (reduceMotion) snap() else spring(
+            dampingRatio = Spring.DampingRatioNoBouncy,
+            stiffness = Spring.StiffnessMediumLow
         ),
         label = "font_scale_y"
     )
@@ -454,7 +458,8 @@ fun FmPlayerScreen(
                             titleFont = currentTitleFont,
                             fontScaleX = fontScaleX,
                             fontScaleY = fontScaleY,
-                            reduceMotion = reduceMotion
+                            reduceMotion = reduceMotion,
+                            isScrubbing = isScrubbing
                         )
 
                         DottedTunerScrubber(
@@ -539,6 +544,7 @@ fun FmPlayerScreen(
                         fontScaleX = fontScaleX,
                         fontScaleY = fontScaleY,
                         reduceMotion = reduceMotion,
+                        isScrubbing = isScrubbing,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
                     )
 
@@ -618,12 +624,7 @@ fun FmPlayerScreen(
                 onBackClick = {
                     reduceMotion = FmPreferences.isReduceMotionEnabled(context)
                     isSettingsVisible = false
-                },
-                onOpenRecordings = {
-                    isSettingsVisible = false
-                    onOpenRecordings()
-                },
-                recordingsCount = recordingsList.size
+                }
             )
         }
 
@@ -631,11 +632,18 @@ fun FmPlayerScreen(
         if (pendingChannelChange != null) {
             AlertDialog(
                 onDismissRequest = { pendingChannelChange = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Filled.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
                 title = {
                     Text(
                         text = stringResource(R.string.stop_recording_dialog_title),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        style = MaterialTheme.typography.headlineSmall
                     )
                 },
                 text = {
@@ -661,10 +669,12 @@ fun FmPlayerScreen(
                     }
                 },
                 dismissButton = {
-                    OutlinedButton(onClick = { pendingChannelChange = null }) {
+                    TextButton(onClick = { pendingChannelChange = null }) {
                         Text(stringResource(android.R.string.cancel))
                     }
-                }
+                },
+                shape = RoundedCornerShape(28.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             )
         }
     }
@@ -983,6 +993,7 @@ private fun StationTitleBlock(
     fontScaleX: Float = 1.0f,
     fontScaleY: Float = 1.0f,
     reduceMotion: Boolean = false,
+    isScrubbing: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val formattedFreq = String.format(Locale.US, "%.1fFM", currentFrequency)
@@ -1015,9 +1026,11 @@ private fun StationTitleBlock(
         // Title with contextual directional slide + fade transition
         AnimatedContent(
             targetState = displayTitle,
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center,
             transitionSpec = {
-                if (reduceMotion) {
-                    fadeIn(animationSpec = tween(200)) togetherWith fadeOut(animationSpec = tween(200))
+                if (reduceMotion || isScrubbing) {
+                    fadeIn(animationSpec = tween(100)) togetherWith fadeOut(animationSpec = tween(100))
                 } else if (direction < 0) {
                     // Previous scrubbing / lower freq: moves to left
                     (slideInHorizontally(animationSpec = tween(300)) { width -> width / 2 } + fadeIn(tween(300)))
@@ -1045,9 +1058,25 @@ private fun StationTitleBlock(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentWidth(Alignment.CenterHorizontally)
                     .graphicsLayer {
                         scaleX = fontScaleX
                         scaleY = fontScaleY
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        val fadeWidth = 24.dp.toPx()
+                        if (size.width > fadeWidth * 2) {
+                            val brush = Brush.horizontalGradient(
+                                0f to Color.Transparent,
+                                (fadeWidth / size.width) to Color.Black,
+                                (1f - fadeWidth / size.width) to Color.Black,
+                                1f to Color.Transparent
+                            )
+                            drawRect(brush = brush, blendMode = BlendMode.DstIn)
+                        }
                     }
                     .then(if (isPlaying) Modifier.basicMarquee() else Modifier)
             )
