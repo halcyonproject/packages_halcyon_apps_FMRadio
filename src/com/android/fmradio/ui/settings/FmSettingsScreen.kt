@@ -20,11 +20,11 @@ package com.android.fmradio.ui.settings
 import android.content.Intent
 import android.net.Uri
 import android.provider.DocumentsContract
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -34,19 +34,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.AudioFile
 import androidx.compose.material.icons.filled.Folder
@@ -54,27 +49,15 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MotionPhotosOff
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedListItem
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -83,20 +66,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.android.fmradio.FmPreferences
+import com.android.settingslib.spa.framework.compose.LocalNavController
+import com.android.settingslib.spa.framework.compose.NavControllerWrapper
+import com.android.settingslib.spa.framework.theme.SettingsDimension
+import com.android.settingslib.spa.framework.theme.SettingsTheme
+import com.android.settingslib.spa.widget.preference.Preference
+import com.android.settingslib.spa.widget.preference.PreferenceModel
+import com.android.settingslib.spa.widget.preference.SwitchPreference
+import com.android.settingslib.spa.widget.preference.SwitchPreferenceModel
+import com.android.settingslib.spa.widget.scaffold.SettingsScaffold
+import com.android.settingslib.spa.widget.ui.Category
+import com.android.settingslib.spa.widget.ui.SettingsIcon
 import com.hlcyn.tuner.R
 import kotlinx.coroutines.CancellationException
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun FmSettingsScreen(
     onBackClick: () -> Unit,
@@ -114,8 +104,8 @@ fun FmSettingsScreen(
 
     var showFormatDialog by remember { mutableStateOf(false) }
     var showBitrateDialog by remember { mutableStateOf(false) }
+    var showAboutDialog by remember { mutableStateOf(false) }
 
-    // AOSP Folder Picker Contract
     val folderPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocumentTree()
     ) { uri: Uri? ->
@@ -153,192 +143,182 @@ fun FmSettingsScreen(
         }
     }
 
-    Scaffold(
+    val backDispatcherOwner = LocalOnBackPressedDispatcherOwner.current
+    val navControllerWrapper = remember(backDispatcherOwner) {
+        object : NavControllerWrapper {
+            override fun navigate(route: String, popUpCurrent: Boolean) {}
+            override fun navigateBack() {
+                onBackClick()
+            }
+        }
+    }
+    Box(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
                 scaleX = animatedScale
                 scaleY = animatedScale
                 translationX = animatedTranslationX
-            },
-        containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = stringResource(R.string.settings),
-                        style = MaterialTheme.typography.titleLarge.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 20.sp
-                        ),
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                },
-                navigationIcon = {
-                    Box(
+            }
+    ) {
+        SettingsTheme {
+            CompositionLocalProvider(LocalNavController provides navControllerWrapper) {
+                SettingsScaffold(
+                    title = stringResource(R.string.settings)
+                ) { paddingValues ->
+                    Column(
                         modifier = Modifier
-                            .padding(start = 12.dp, end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                            .clickable(onClick = onBackClick),
-                        contentAlignment = Alignment.Center
+                            .fillMaxSize()
+                            .padding(paddingValues)
+                            .verticalScroll(rememberScrollState())
+                            .navigationBarsPadding(),
+                        verticalArrangement = Arrangement.spacedBy(SettingsDimension.itemPaddingAround)
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(android.R.string.cancel),
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                modifier = Modifier.statusBarsPadding()
-            )
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-                .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            // Category 1: Playback & System
-            SettingsCategoryHeader(title = "Playback & System")
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
-            ) {
-                SettingsSegmentedSwitchRow(
-                    icon = Icons.Filled.PlayCircle,
-                    title = "Autoplay on launch",
-                    summary = "Automatically start radio playback when opening the app",
-                    checked = autoplayEnabled,
-                    onCheckedChange = {
-                        autoplayEnabled = it
-                        FmPreferences.setAutoplayEnabled(context, it)
-                    },
-                    shapes = ListItemDefaults.segmentedShapes(0, 2)
-                )
+                        Category(title = stringResource(R.string.settings_cat_general)) {
+                            SwitchPreference(
+                                object : SwitchPreferenceModel {
+                                    override val title = stringResource(R.string.pref_autoplay_title)
+                                    override val summary = { context.getString(R.string.pref_autoplay_summary) }
+                                    override val checked = { autoplayEnabled }
+                                    override val onCheckedChange = { checked: Boolean ->
+                                        autoplayEnabled = checked
+                                        FmPreferences.setAutoplayEnabled(context, checked)
+                                    }
+                                    override val icon = @Composable {
+                                        SettingsIcon(imageVector = Icons.Filled.PlayCircle)
+                                    }
+                                }
+                            )
 
-                SettingsSegmentedSwitchRow(
-                    icon = Icons.Filled.MotionPhotosOff,
-                    title = "Reduce motion",
-                    summary = "Minimize motion effects, breathing font pulses, and animations",
-                    checked = reduceMotion,
-                    onCheckedChange = {
-                        reduceMotion = it
-                        FmPreferences.setReduceMotionEnabled(context, it)
-                    },
-                    shapes = ListItemDefaults.segmentedShapes(1, 2)
-                )
-            }
+                            SwitchPreference(
+                                object : SwitchPreferenceModel {
+                                    override val title = stringResource(R.string.pref_reduce_motion_title)
+                                    override val summary = { context.getString(R.string.pref_reduce_motion_summary) }
+                                    override val checked = { reduceMotion }
+                                    override val onCheckedChange = { checked: Boolean ->
+                                        reduceMotion = checked
+                                        FmPreferences.setReduceMotionEnabled(context, checked)
+                                    }
+                                    override val icon = @Composable {
+                                        SettingsIcon(imageVector = Icons.Filled.MotionPhotosOff)
+                                    }
+                                }
+                            )
+                        }
 
-            // Category 2: Recording Preferences
-            SettingsCategoryHeader(title = "Recording Preferences")
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
-            ) {
-                SettingsSegmentedClickableRow(
-                    icon = Icons.Filled.AudioFile,
-                    title = "Audio format",
-                    summary = if (recordingFormat == FmPreferences.FORMAT_3GPP) "3GPP (.3gpp)" else "AAC / M4A (.m4a)",
-                    onClick = { showFormatDialog = true },
-                    shapes = ListItemDefaults.segmentedShapes(0, 4)
-                )
+                        Category(title = stringResource(R.string.settings_cat_audio)) {
+                            Preference(
+                                object : PreferenceModel {
+                                    override val title = stringResource(R.string.pref_format_title)
+                                    override val summary = {
+                                        if (recordingFormat == FmPreferences.FORMAT_MP3) {
+                                            context.getString(R.string.format_mp3_label)
+                                        } else {
+                                            context.getString(R.string.format_m4a_label)
+                                        }
+                                    }
+                                    override val onClick = { showFormatDialog = true }
+                                    override val icon = @Composable {
+                                        SettingsIcon(imageVector = Icons.Filled.AudioFile)
+                                    }
+                                }
+                            )
 
-                val bitrateLabel = when (recordingBitrate) {
-                    FmPreferences.BITRATE_128K -> "128 kbps (Standard)"
-                    FmPreferences.BITRATE_256K -> "256 kbps (Ultra)"
-                    FmPreferences.BITRATE_320K -> "320 kbps (Maximum)"
-                    else -> "192 kbps (High Quality)"
+                            val bitrateSummary = when (recordingBitrate) {
+                                FmPreferences.BITRATE_128K -> context.getString(R.string.bitrate_128k_label)
+                                FmPreferences.BITRATE_256K -> context.getString(R.string.bitrate_256k_label)
+                                FmPreferences.BITRATE_320K -> context.getString(R.string.bitrate_320k_label)
+                                else -> context.getString(R.string.bitrate_192k_label)
+                            }
+                            Preference(
+                                object : PreferenceModel {
+                                    override val title = stringResource(R.string.pref_bitrate_title)
+                                    override val summary = { bitrateSummary }
+                                    override val onClick = { showBitrateDialog = true }
+                                    override val icon = @Composable {
+                                        SettingsIcon(imageVector = Icons.Filled.GraphicEq)
+                                    }
+                                }
+                            )
+
+                            Preference(
+                                object : PreferenceModel {
+                                    override val title = stringResource(R.string.pref_location_title)
+                                    override val summary = { recordingLocation }
+                                    override val onClick = { folderPickerLauncher.launch(null) }
+                                    override val icon = @Composable {
+                                        SettingsIcon(imageVector = Icons.Filled.Folder)
+                                    }
+                                }
+                            )
+                        }
+
+                        Category(title = stringResource(R.string.settings_cat_about)) {
+                            Preference(
+                                object : PreferenceModel {
+                                    override val title = stringResource(R.string.dialog_about_title)
+                                    override val summary = { context.getString(R.string.pref_version_summary) }
+                                    override val onClick = { showAboutDialog = true }
+                                    override val icon = @Composable {
+                                        SettingsIcon(imageVector = Icons.Outlined.Info)
+                                    }
+                                }
+                            )
+
+                            Preference(
+                                object : PreferenceModel {
+                                    override val title = stringResource(R.string.pref_license_title)
+                                    override val summary = { context.getString(R.string.pref_license_summary) }
+                                    override val onClick = {
+                                        try {
+                                            val browserIntent = Intent(
+                                                Intent.ACTION_VIEW,
+                                                Uri.parse("https://github.com/halcyonproject/packages_halcyon_apps_FMRadio/blob/17.0/LICENSE")
+                                            )
+                                            context.startActivity(browserIntent)
+                                        } catch (e: Exception) {
+                                            // Ignore activity launch failures
+                                        }
+                                    }
+                                    override val icon = @Composable {
+                                        SettingsIcon(imageVector = Icons.Outlined.Code)
+                                    }
+                                }
+                            )
+                        }
+
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-                SettingsSegmentedClickableRow(
-                    icon = Icons.Filled.GraphicEq,
-                    title = "Audio bitrate",
-                    summary = bitrateLabel,
-                    onClick = { showBitrateDialog = true },
-                    shapes = ListItemDefaults.segmentedShapes(1, 4)
-                )
-
-                SettingsSegmentedClickableRow(
-                    icon = Icons.Filled.Folder,
-                    title = "Storage folder",
-                    summary = recordingLocation,
-                    onClick = { folderPickerLauncher.launch(null) },
-                    shapes = ListItemDefaults.segmentedShapes(2, 4)
-                )
-
-                SettingsSegmentedClickableRow(
-                    icon = Icons.AutoMirrored.Filled.QueueMusic,
-                    title = stringResource(R.string.saved_recordings),
-                    summary = if (recordingsCount > 0) String.format(Locale.getDefault(), "%d recordings", recordingsCount) else "View all recorded radio broadcasts",
-                    onClick = onOpenRecordings,
-                    shapes = ListItemDefaults.segmentedShapes(3, 4),
-                    trailingContent = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                )
             }
-
-            // Category 3: About & Credits
-            SettingsCategoryHeader(title = "About & Credits")
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
-            ) {
-                SettingsSegmentedClickableRow(
-                    icon = Icons.Outlined.Info,
-                    title = "Version",
-                    summary = "3.2.0 (com.hlcyn.tuner)",
-                    onClick = {},
-                    shapes = ListItemDefaults.segmentedShapes(0, 3)
-                )
-
-                SettingsSegmentedClickableRow(
-                    icon = Icons.Outlined.FavoriteBorder,
-                    title = "Credits",
-                    summary = "Halcyon Project, iusmac, LineageOS",
-                    onClick = {},
-                    shapes = ListItemDefaults.segmentedShapes(1, 3)
-                )
-
-                SettingsSegmentedClickableRow(
-                    icon = Icons.Outlined.Code,
-                    title = "License",
-                    summary = "Apache License 2.0",
-                    onClick = {},
-                    shapes = ListItemDefaults.segmentedShapes(2, 3)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
+    }
 
-    // Format Selector Dialog
     if (showFormatDialog) {
-        val formats = listOf(
-            FmPreferences.FORMAT_M4A to "AAC / M4A (MPEG-4 Container)",
-            FmPreferences.FORMAT_3GPP to "3GPP (3GPP Container)"
-        )
         AlertDialog(
             onDismissRequest = { showFormatDialog = false },
-            title = { Text(text = "Select audio format", fontWeight = FontWeight.Bold) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.AudioFile,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_select_format),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
             text = {
                 Column {
-                    formats.forEach { (fmt, label) ->
+                    val formats = listOf(
+                        Triple(FmPreferences.FORMAT_M4A, stringResource(R.string.format_m4a_label), stringResource(R.string.format_m4a_desc)),
+                        Triple(FmPreferences.FORMAT_MP3, stringResource(R.string.format_mp3_label), stringResource(R.string.format_mp3_desc))
+                    )
+
+                    formats.forEach { (fmt, label, desc) ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -359,171 +339,134 @@ fun FmSettingsScreen(
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                            Column {
+                                Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showFormatDialog = false }) {
-                    Text(text = stringResource(android.R.string.cancel))
+                    Text(stringResource(android.R.string.cancel))
                 }
-            }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 
-    // Bitrate Selector Dialog
     if (showBitrateDialog) {
-        val bitrates = listOf(
-            FmPreferences.BITRATE_128K to "128 kbps (Standard)",
-            FmPreferences.BITRATE_192K to "192 kbps (High Quality)",
-            FmPreferences.BITRATE_256K to "256 kbps (Ultra)",
-            FmPreferences.BITRATE_320K to "320 kbps (Maximum)"
-        )
         AlertDialog(
             onDismissRequest = { showBitrateDialog = false },
-            title = { Text(text = "Select audio bitrate", fontWeight = FontWeight.Bold) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.GraphicEq,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.dialog_select_bitrate),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
             text = {
                 Column {
-                    bitrates.forEach { (br, label) ->
+                    val bitrates = listOf(
+                        Triple(FmPreferences.BITRATE_128K, stringResource(R.string.bitrate_128k_label), stringResource(R.string.bitrate_128k_desc)),
+                        Triple(FmPreferences.BITRATE_192K, stringResource(R.string.bitrate_192k_label), stringResource(R.string.bitrate_192k_desc)),
+                        Triple(FmPreferences.BITRATE_256K, stringResource(R.string.bitrate_256k_label), stringResource(R.string.bitrate_256k_desc)),
+                        Triple(FmPreferences.BITRATE_320K, stringResource(R.string.bitrate_320k_label), stringResource(R.string.bitrate_320k_desc))
+                    )
+
+                    bitrates.forEach { (rate, label, desc) ->
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    recordingBitrate = br
-                                    FmPreferences.setRecordingBitrate(context, br)
+                                    recordingBitrate = rate
+                                    FmPreferences.setRecordingBitrate(context, rate)
                                     showBitrateDialog = false
                                 }
-                                .padding(vertical = 12.dp),
+                                .padding(vertical = 10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             RadioButton(
-                                selected = (recordingBitrate == br),
+                                selected = (recordingBitrate == rate),
                                 onClick = {
-                                    recordingBitrate = br
-                                    FmPreferences.setRecordingBitrate(context, br)
+                                    recordingBitrate = rate
+                                    FmPreferences.setRecordingBitrate(context, rate)
                                     showBitrateDialog = false
                                 }
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                            Column {
+                                Text(text = label, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    text = desc,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showBitrateDialog = false }) {
-                    Text(text = stringResource(android.R.string.cancel))
+                    Text(stringResource(android.R.string.cancel))
                 }
-            }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
-}
 
-@Composable
-private fun SettingsCategoryHeader(
-    title: String,
-    modifier: Modifier = Modifier
-) {
-    Text(
-        text = title.uppercase(Locale.getDefault()),
-        style = MaterialTheme.typography.labelMedium.copy(
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            letterSpacing = 1.2.sp
-        ),
-        modifier = modifier.padding(start = 24.dp, top = 8.dp, bottom = 4.dp)
-    )
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SettingsSegmentedSwitchRow(
-    icon: ImageVector,
-    title: String,
-    summary: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-    shapes: ListItemShapes,
-    modifier: Modifier = Modifier
-) {
-    SegmentedListItem(
-        checked = checked,
-        onCheckedChange = onCheckedChange,
-        shapes = shapes,
-        modifier = modifier.fillMaxWidth(),
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        content = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        supportingContent = if (summary.isNotBlank()) {
-            {
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+    if (showAboutDialog) {
+        AlertDialog(
+            onDismissRequest = { showAboutDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
                 )
-            }
-        } else null,
-        trailingContent = {
-            Switch(
-                checked = checked,
-                onCheckedChange = onCheckedChange
-            )
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3ExpressiveApi::class)
-@Composable
-private fun SettingsSegmentedClickableRow(
-    icon: ImageVector,
-    title: String,
-    summary: String,
-    onClick: () -> Unit,
-    shapes: ListItemShapes,
-    trailingContent: @Composable (() -> Unit)? = null,
-    modifier: Modifier = Modifier
-) {
-    SegmentedListItem(
-        onClick = onClick,
-        shapes = shapes,
-        modifier = modifier.fillMaxWidth(),
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        content = {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Medium),
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        },
-        supportingContent = if (summary.isNotBlank()) {
-            {
+            },
+            title = {
                 Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = stringResource(R.string.dialog_about_title),
+                    style = MaterialTheme.typography.headlineSmall
                 )
-            }
-        } else null,
-        trailingContent = trailingContent
-    )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = stringResource(R.string.about_app_description),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        text = stringResource(R.string.about_crafted_by),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showAboutDialog = false }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+        )
+    }
 }

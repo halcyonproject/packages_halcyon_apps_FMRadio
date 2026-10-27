@@ -144,4 +144,55 @@
     <string name="recordings_empty_desc">Audio recorded from radio broadcasts will appear here.</string>
     <string name="saved_recordings">Saved recordings</string>
     <string name="settings">Settings</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_cat_general">General</string>
+    <string name="pref_autoplay_title">Auto-play on startup</string>
+    <string name="pref_autoplay_summary">Automatically tune and play the last station when launched</string>
+    <string name="settings_cat_appearance">Appearance &amp; Physics</string>
+    <string name="pref_reduce_motion_title">Reduce motion</string>
+    <string name="pref_reduce_motion_summary">Disable spring physics and reactive variable font animations</string>
+    <string name="settings_cat_audio">Audio &amp; Recording</string>
+    <string name="pref_format_title">Recording format</string>
+    <string name="pref_bitrate_title">Audio bitrate</string>
+    <string name="pref_location_title">Storage folder</string>
+    <string name="settings_cat_about">About &amp; Project</string>
+    <string name="pref_version_title">Version</string>
+    <string name="pref_version_summary">v17.0 (2026) • Revamped Material 3 Experience</string>
+    <string name="pref_license_title">License</string>
+    <string name="pref_license_summary">Apache 2.0 &amp; GNU General Public License</string>
+
+    <!-- Dialogs -->
+    <string name="dialog_select_format">Select Audio Format</string>
+    <string name="dialog_select_bitrate">Select Audio Bitrate</string>
+    <string name="dialog_about_title">About Halcyon FMTuner</string>
+    <string name="about_app_description">Hardware FM Radio receiver forked from iusmac\'s Revamped FM Radio with improvements to Material 3 Expressive UI, expressive spring physics, and high quality broadcast recording.</string>
+    <string name="about_crafted_by">Crafted for Halcyon Project &amp; AOSP.</string>
+
+    <string name="format_m4a_label">AAC / M4A (Recommended)</string>
+    <string name="format_m4a_desc">High fidelity, modern audio container (.m4a)</string>
+    <string name="format_mp3_label">MP3 (.mp3)</string>
+    <string name="format_mp3_desc">Universal playback compatibility (.mp3)</string>
+
+    <string name="bitrate_128k_label">128 kbps</string>
+    <string name="bitrate_128k_desc">Standard speech quality</string>
+    <string name="bitrate_192k_label">192 kbps (Default)</string>
+    <string name="bitrate_192k_desc">High quality music &amp; stereo</string>
+    <string name="bitrate_256k_label">256 kbps</string>
+    <string name="bitrate_256k_desc">Ultra clear broadcast</string>
+    <string name="bitrate_320k_label">320 kbps</string>
+    <string name="bitrate_320k_desc">Maximum preservation</string>
+
+    <string name="delete_recording_title">Delete recording?</string>
+    <string name="delete_recording_desc">Are you sure you want to delete \"%1$s\"? This action cannot be undone.</string>
+    <string name="delete">Delete</string>
+
+    <string name="group_today">Today</string>
+    <string name="group_yesterday">Yesterday</string>
+    <string name="group_this_week">This Week</string>
+    <string name="group_earlier">Earlier</string>
+
+    <string name="edit_station_title">Edit Station Name</string>
+    <string name="delete_favorite_title">Delete Favorite</string>
+    <string name="delete_favorite_message">Remove %1$s (%2$s) from favorites?</string>
 </resources>

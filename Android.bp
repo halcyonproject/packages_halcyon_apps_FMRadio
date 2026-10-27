@@ -36,6 +36,8 @@ android_app {
     ],
 
     static_libs: [
+        "SettingsLib",
+        "SpaLib",
         "androidx.activity_activity-compose",
         "androidx.compose.animation_animation",
         "androidx.compose.foundation_foundation",

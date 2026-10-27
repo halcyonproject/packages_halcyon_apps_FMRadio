@@ -16,12 +16,19 @@
 
 package com.android.fmradio.ui.recording
 
+import android.content.ClipData
 import android.content.Intent
 import android.media.MediaPlayer
 import android.net.Uri
 import android.text.format.DateFormat
 import android.text.format.Formatter
+import androidx.core.content.FileProvider
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.PredictiveBackHandler
+import com.android.settingslib.spa.framework.compose.LocalNavController
+import com.android.settingslib.spa.framework.compose.NavControllerWrapper
+import com.android.settingslib.spa.framework.theme.SettingsTheme
+import com.android.settingslib.spa.widget.scaffold.SettingsScaffold
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
@@ -45,6 +52,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -61,6 +71,7 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -77,6 +88,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -85,6 +97,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -289,264 +302,258 @@ fun FmRecordingsScreen(
     }
 
     fun shareRecording(item: RecordingItem) {
+        val file = File(item.filePath)
+        val contentUri: Uri = try {
+            FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+        } catch (e: Exception) {
+            item.uri
+        }
+        val mimeType = when {
+            item.filePath.endsWith(".mp3", ignoreCase = true) -> "audio/mpeg"
+            item.filePath.endsWith(".m4a", ignoreCase = true) -> "audio/mp4"
+            item.filePath.endsWith(".3gpp", ignoreCase = true) || item.filePath.endsWith(".3gp", ignoreCase = true) -> "audio/3gpp"
+            else -> "audio/*"
+        }
         val shareIntent = Intent(Intent.ACTION_SEND).apply {
-            type = "audio/*"
-            putExtra(Intent.EXTRA_STREAM, item.uri)
+            type = mimeType
+            putExtra(Intent.EXTRA_STREAM, contentUri)
+            clipData = ClipData.newUri(context.contentResolver, item.title, contentUri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         context.startActivity(Intent.createChooser(shareIntent, item.title))
     }
 
-    Scaffold(
+    val backDispatcherOwner = LocalOnBackPressedDispatcherOwner.current
+    val navControllerWrapper = remember(backDispatcherOwner) {
+        object : NavControllerWrapper {
+            override fun navigate(route: String, popUpCurrent: Boolean) {}
+            override fun navigateBack() {
+                onBackClick()
+            }
+        }
+    }
+
+    Box(
         modifier = modifier
             .fillMaxSize()
             .graphicsLayer {
                 scaleX = animatedScale
                 scaleY = animatedScale
                 translationX = animatedTranslationX
-            },
-        containerColor = MaterialTheme.colorScheme.surface,
-        topBar = {
-            TopAppBar(
-                title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text(
-                            text = stringResource(R.string.fm_over_record_list),
-                            style = MaterialTheme.typography.titleLarge.copy(
-                                fontFamily = titleFont,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 20.sp
-                            ),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        if (recordingsList.isNotEmpty()) {
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primaryContainer
-                            ) {
-                                Text(
-                                    text = "${recordingsList.size}",
-                                    style = MaterialTheme.typography.labelMedium.copy(fontFamily = bodyFont),
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-                },
-                navigationIcon = {
+            }
+    ) {
+        SettingsTheme {
+            CompositionLocalProvider(LocalNavController provides navControllerWrapper) {
+                SettingsScaffold(
+                    title = stringResource(R.string.fm_over_record_list)
+                ) { innerPadding ->
                     Box(
                         modifier = Modifier
-                            .padding(start = 12.dp, end = 8.dp)
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surfaceContainerHighest)
-                            .clickable(onClick = onBackClick),
-                        contentAlignment = Alignment.Center
+                            .fillMaxSize()
+                            .padding(top = innerPadding.calculateTopPadding())
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(android.R.string.cancel),
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                modifier = Modifier.statusBarsPadding()
-            )
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .navigationBarsPadding()
-        ) {
-            if (recordingsList.isEmpty()) {
-                // Empty State View
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Surface(
-                        modifier = Modifier.size(96.dp),
-                        shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh
-                    ) {
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
+                    if (recordingsList.isEmpty()) {
+                        // Empty State View
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                            )
-                        }
-                    }
+                            Surface(
+                                modifier = Modifier.size(96.dp),
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            ) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(48.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
-                    Text(
-                        text = stringResource(R.string.recordings_empty),
-                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = titleFont),
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = stringResource(R.string.recordings_empty_desc),
-                        style = MaterialTheme.typography.bodyMedium.copy(fontFamily = bodyFont),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                val groupedRecordings = remember(recordingsList) {
-                    val now = System.currentTimeMillis()
-                    val oneDay = 24 * 60 * 60 * 1000L
-                    val groups = linkedMapOf<String, MutableList<RecordingItem>>()
-                    for (item in recordingsList) {
-                        val diff = now - item.dateModified
-                        val category = when {
-                            diff < oneDay -> "Today"
-                            diff < 2 * oneDay -> "Yesterday"
-                            diff < 7 * oneDay -> "This Week"
-                            else -> "Earlier"
-                        }
-                        groups.getOrPut(category) { mutableListOf() }.add(item)
-                    }
-                    groups
-                }
-
-                // Full-Screen Recordings Expressive Segmented List with Categories
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 12.dp,
-                        bottom = if (currentlyPlayingItem != null) 160.dp else 24.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
-                ) {
-                    groupedRecordings.forEach { (category, items) ->
-                        item(key = "cat_$category") {
                             Text(
-                                text = category.uppercase(Locale.getDefault()),
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.primary,
-                                    letterSpacing = 1.2.sp
-                                ),
-                                modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp)
+                                text = stringResource(R.string.recordings_empty),
+                                style = MaterialTheme.typography.titleMedium.copy(fontFamily = titleFont),
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = stringResource(R.string.recordings_empty_desc),
+                                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = bodyFont),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+                    } else {
+                        val groupedRecordings = remember(recordingsList) {
+                            val now = System.currentTimeMillis()
+                            val oneDay = 24 * 60 * 60 * 1000L
+                            val groups = linkedMapOf<String, MutableList<RecordingItem>>()
+                            for (item in recordingsList) {
+                                val diff = now - item.dateModified
+                                val category = when {
+                                    diff < oneDay -> context.getString(R.string.group_today)
+                                    diff < 2 * oneDay -> context.getString(R.string.group_yesterday)
+                                    diff < 7 * oneDay -> context.getString(R.string.group_this_week)
+                                    else -> context.getString(R.string.group_earlier)
+                                }
+                                groups.getOrPut(category) { mutableListOf() }.add(item)
+                            }
+                            groups
+                        }
 
-                        itemsIndexed(items, key = { _, item -> item.uri.toString() }) { index, item ->
-                            val isThisPlaying = (currentlyPlayingItem?.uri == item.uri && isAudioPlaying)
-
-                            SegmentedListItem(
-                                selected = (currentlyPlayingItem?.uri == item.uri),
-                                onClick = { togglePlayback(item) },
-                                shapes = ListItemDefaults.segmentedShapes(index = index, count = items.size),
-                                modifier = Modifier.fillMaxWidth(),
-                                leadingContent = {
-                                    FilledTonalIconButton(
-                                        onClick = { togglePlayback(item) },
-                                        modifier = Modifier.size(40.dp),
-                                        shape = CircleShape,
-                                        colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                            containerColor = if (isThisPlaying) {
-                                                MaterialTheme.colorScheme.primary
-                                            } else {
-                                                MaterialTheme.colorScheme.surfaceContainerHighest
-                                            },
-                                            contentColor = if (isThisPlaying) {
-                                                MaterialTheme.colorScheme.onPrimary
-                                            } else {
-                                                MaterialTheme.colorScheme.onSurface
-                                            }
-                                        )
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isThisPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(22.dp)
-                                        )
-                                    }
-                                },
-                                content = {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                start = 16.dp,
+                                end = 16.dp,
+                                top = 12.dp,
+                                bottom = (if (currentlyPlayingItem != null) 160.dp else 24.dp) + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                            ),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            groupedRecordings.forEach { (category, items) ->
+                                item(key = "cat_$category") {
                                     Text(
-                                        text = item.title,
-                                        style = MaterialTheme.typography.bodyLarge.copy(
-                                            fontFamily = bodyFont,
-                                            fontWeight = FontWeight.SemiBold
+                                        text = category.uppercase(Locale.getDefault()),
+                                        style = MaterialTheme.typography.labelMedium.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            letterSpacing = 1.2.sp
                                         ),
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
+                                        modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp)
                                     )
-                                },
-                                supportingContent = {
-                                    val formattedDate = DateFormat.format("MMM dd, yyyy • hh:mm a", Date(item.dateModified)).toString()
-                                    val formattedFileSize = Formatter.formatFileSize(context, item.sizeBytes)
-                                    val durationStr = if (item.durationMs > 0) {
-                                        val m = (item.durationMs / 1000) / 60
-                                        val s = (item.durationMs / 1000) % 60
-                                        String.format(Locale.US, "%02d:%02d • ", m, s)
-                                    } else {
-                                        ""
-                                    }
-                                    Text(
-                                        text = "$durationStr$formattedFileSize • $formattedDate",
-                                        style = MaterialTheme.typography.bodySmall.copy(fontFamily = bodyFont),
-                                        color = if (currentlyPlayingItem?.uri == item.uri) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                },
-                                trailingContent = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { shareRecording(item) }) {
-                                            Icon(
-                                                imageVector = Icons.Filled.Share,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp),
-                                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        IconButton(onClick = { itemToDelete = item }) {
-                                            Icon(
-                                                imageVector = Icons.Filled.DeleteOutline,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(20.dp),
-                                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
-                                            )
+                                }
+
+                                itemsIndexed(items, key = { _, item -> item.uri.toString() }) { _, item ->
+                                    val isThisPlaying = (currentlyPlayingItem?.uri == item.uri && isAudioPlaying)
+                                    val isSelected = (currentlyPlayingItem?.uri == item.uri)
+
+                                    Card(
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = CardDefaults.cardColors(
+                                            containerColor = if (isSelected) {
+                                                MaterialTheme.colorScheme.primaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.surfaceVariant
+                                            }
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable { togglePlayback(item) }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            FilledTonalIconButton(
+                                                onClick = { togglePlayback(item) },
+                                                modifier = Modifier.size(40.dp),
+                                                shape = CircleShape,
+                                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                                    containerColor = if (isThisPlaying) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.surfaceContainerHighest
+                                                    },
+                                                    contentColor = if (isThisPlaying) {
+                                                        MaterialTheme.colorScheme.onPrimary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurface
+                                                    }
+                                                )
+                                            ) {
+                                                Icon(
+                                                    imageVector = if (isThisPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+
+                                            Spacer(modifier = Modifier.width(16.dp))
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = item.title,
+                                                    style = MaterialTheme.typography.bodyLarge.copy(
+                                                        fontFamily = bodyFont,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    ),
+                                                    color = if (isSelected) {
+                                                        MaterialTheme.colorScheme.onPrimaryContainer
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurface
+                                                    },
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                val formattedDate = DateFormat.format(
+                                                    "MMM dd, yyyy • hh:mm a",
+                                                    Date(item.dateModified)
+                                                ).toString()
+                                                val formattedFileSize = Formatter.formatFileSize(context, item.sizeBytes)
+                                                val durationStr = if (item.durationMs > 0) {
+                                                    val m = (item.durationMs / 1000) / 60
+                                                    val s = (item.durationMs / 1000) % 60
+                                                    String.format(Locale.US, "%02d:%02d • ", m, s)
+                                                } else {
+                                                    ""
+                                                }
+                                                Text(
+                                                    text = "$durationStr$formattedFileSize • $formattedDate",
+                                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = bodyFont),
+                                                    color = if (isSelected) {
+                                                        MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                                    },
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                IconButton(onClick = { shareRecording(item) }) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.Share,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(20.dp),
+                                                        tint = if (isSelected) {
+                                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                                        } else {
+                                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                                        }
+                                                    )
+                                                }
+                                                IconButton(onClick = { itemToDelete = item }) {
+                                                    Icon(
+                                                        imageVector = Icons.Filled.DeleteOutline,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(20.dp),
+                                                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                            )
+                            }
                         }
                     }
-                }
-            }
 
             // Embedded Now Playing Floating Bar & Seekbar (replaces radio playback while on this screen)
             AnimatedVisibility(
@@ -556,6 +563,7 @@ fun FmRecordingsScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
+                    .navigationBarsPadding()
                     .padding(16.dp)
             ) {
                 val item = currentlyPlayingItem ?: return@AnimatedVisibility
@@ -707,16 +715,23 @@ fun FmRecordingsScreen(
             val item = itemToDelete!!
             AlertDialog(
                 onDismissRequest = { itemToDelete = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp)
+                    )
+                },
                 title = {
                     Text(
-                        text = "Delete recording?",
-                        style = MaterialTheme.typography.titleMedium.copy(fontFamily = titleFont),
-                        fontWeight = FontWeight.Bold
+                        text = stringResource(R.string.delete_recording_title),
+                        style = MaterialTheme.typography.headlineSmall
                     )
                 },
                 text = {
                     Text(
-                        text = "Are you sure you want to delete \"${item.title}\"? This action cannot be undone.",
+                        text = stringResource(R.string.delete_recording_desc, item.title),
                         style = MaterialTheme.typography.bodyMedium.copy(fontFamily = bodyFont)
                     )
                 },
@@ -734,15 +749,20 @@ fun FmRecordingsScreen(
                             contentColor = MaterialTheme.colorScheme.onError
                         )
                     ) {
-                        Text("Delete")
+                        Text(stringResource(R.string.delete))
                     }
                 },
                 dismissButton = {
-                    OutlinedButton(onClick = { itemToDelete = null }) {
+                    TextButton(onClick = { itemToDelete = null }) {
                         Text(stringResource(android.R.string.cancel))
                     }
-                }
+                },
+                shape = RoundedCornerShape(28.dp),
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             )
         }
+            }
+        }
+    }
     }
 }

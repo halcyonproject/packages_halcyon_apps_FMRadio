@@ -131,13 +131,13 @@ public class FmRecorder implements MediaRecorder.OnErrorListener, MediaRecorder.
         }
         String formatPref = FmPreferences.getRecordingFormat(context);
         int bitratePref = FmPreferences.getRecordingBitrate(context);
-        int outputFormat = MediaRecorder.OutputFormat.THREE_GPP;
-        mCurrentExtension = ".3gpp";
-        mCurrentMimeType = "audio/3gpp";
-        if (FmPreferences.FORMAT_M4A.equalsIgnoreCase(formatPref)) {
+        int outputFormat = MediaRecorder.OutputFormat.MPEG_4;
+        mCurrentExtension = ".m4a";
+        mCurrentMimeType = "audio/mp4";
+        if (FmPreferences.FORMAT_MP3.equalsIgnoreCase(formatPref)) {
             outputFormat = MediaRecorder.OutputFormat.MPEG_4;
-            mCurrentExtension = ".m4a";
-            mCurrentMimeType = "audio/mp4";
+            mCurrentExtension = ".mp3";
+            mCurrentMimeType = "audio/mpeg";
         }
 
         // create recording temporary file

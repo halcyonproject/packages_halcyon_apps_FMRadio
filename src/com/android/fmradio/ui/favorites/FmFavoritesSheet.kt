@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2026 RevampedFMRadio Project
+ * Copyright (C) 2026 Halcyon Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +19,17 @@ package com.android.fmradio.ui.favorites
 
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,85 +38,87 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.DeleteOutline
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Radio
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DragHandle
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Radio
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedListItem
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.zIndex
 import com.android.fmradio.FmPreferences
 import com.android.fmradio.FmStation
 import com.android.fmradio.FmUtils
-import com.hlcyn.tuner.R
 import com.android.fmradio.ui.FavoriteStationItem
+import com.hlcyn.tuner.R
 import kotlinx.coroutines.CancellationException
-import java.util.Locale
-import kotlin.math.roundToInt
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FmFavoritesSheet(
     favoritesList: List<FavoriteStationItem>,
     currentFrequency: Float,
-    sheetState: SheetState,
     onStationSelect: (Int) -> Unit,
     onDismissRequest: () -> Unit,
     onReloadFavorites: () -> Unit,
+    sheetState: SheetState,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val currentFreqInt = (currentFrequency * 10f).roundToInt()
+    val currentFreqInt = FmUtils.computeStation(currentFrequency)
 
-    // Dialog States
-    var stationToRename by remember { mutableStateOf<FavoriteStationItem?>(null) }
+    val orderedFavorites = remember { mutableStateListOf<FavoriteStationItem>() }
+    var draggingIndex by remember { mutableStateOf<Int?>(null) }
+    var dragOffsetY by remember { mutableFloatStateOf(0f) }
+
+    LaunchedEffect(favoritesList) {
+        if (draggingIndex == null) {
+            orderedFavorites.clear()
+            orderedFavorites.addAll(favoritesList)
+        }
+    }
+
+    var stationToEdit by remember { mutableStateOf<FavoriteStationItem?>(null) }
     var stationToDelete by remember { mutableStateOf<FavoriteStationItem?>(null) }
-    var showAddDialog by remember { mutableStateOf(false) }
 
-    // Predictive Back Handling
     var predictiveProgress by remember { mutableFloatStateOf(0f) }
-    val animatedScale by animateFloatAsState(targetValue = 1f - predictiveProgress * 0.06f, label = "fav_scale")
+    val animatedScale by animateFloatAsState(
+        targetValue = 1f - predictiveProgress * 0.08f,
+        label = "fav_back_scale"
+    )
 
     PredictiveBackHandler(enabled = true) { progress ->
         try {
@@ -127,6 +130,8 @@ fun FmFavoritesSheet(
             predictiveProgress = 0f
         }
     }
+
+    val itemHeightPx = 72f * context.resources.displayMetrics.density
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -140,434 +145,348 @@ fun FmFavoritesSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 32.dp)
+                .padding(bottom = 24.dp)
                 .navigationBarsPadding()
         ) {
-            // Header Row: Title, Badge, and Add Action
+            // Header Row: Title and Counter Badge
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 24.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.favorites),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
-                    )
-                    if (favoritesList.isNotEmpty()) {
-                        Surface(
-                            shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primaryContainer
-                        ) {
-                            Text(
-                                text = "${favoritesList.size}",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
+                Text(
+                    text = stringResource(R.string.favorites),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 20.sp
+                )
+                if (orderedFavorites.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primaryContainer
+                    ) {
+                        Text(
+                            text = "${orderedFavorites.size}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
                     }
-                }
-
-                FilledTonalButton(
-                    onClick = { showAddDialog = true },
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = "Add Station", style = MaterialTheme.typography.labelMedium)
                 }
             }
 
-            LazyColumn(
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(ListItemDefaults.SegmentedGap)
-            ) {
-                // Category 1: Currently Tuned Station
-                item(key = "header_current") {
-                    Text(
-                        text = "CURRENT STATION",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 1.2.sp
-                        ),
-                        modifier = Modifier.padding(start = 12.dp, top = 8.dp, bottom = 4.dp)
-                    )
+            if (orderedFavorites.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Radio,
+                            contentDescription = null,
+                            modifier = Modifier.size(48.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                        )
+                        Text(
+                            text = "No favorite stations yet",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    itemsIndexed(orderedFavorites, key = { _, item -> item.id }) { index, item ->
+                        val isSelected = item.frequency == currentFreqInt
+                        val isDragging = draggingIndex == index
 
-                item(key = "item_current") {
-                    val isCurrentFavorite = favoritesList.any { it.frequency == currentFreqInt }
-                    val currentFavoriteItem = favoritesList.find { it.frequency == currentFreqInt }
+                        val scale by animateFloatAsState(
+                            targetValue = if (isDragging) 1.03f else 1.0f,
+                            label = "favCardScale"
+                        )
 
-                    SegmentedListItem(
-                        onClick = { onStationSelect(currentFreqInt) },
-                        shapes = ListItemDefaults.segmentedShapes(0, 1),
-                        modifier = Modifier.fillMaxWidth(),
-                        leadingContent = {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        },
-                        content = {
-                            val currentTitle = if (currentFavoriteItem != null && currentFavoriteItem.name.isNotBlank()) {
-                                currentFavoriteItem.name
-                            } else {
-                                String.format(Locale.US, "%.1f MHz", currentFrequency)
-                            }
-                            Text(
-                                text = currentTitle,
-                                style = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold),
-                                color = MaterialTheme.colorScheme.onSurface,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        },
-                        supportingContent = {
-                            Text(
-                                text = if (isCurrentFavorite) "Saved in favorites" else String.format(Locale.US, "%.1f MHz • Live broadcast", currentFrequency),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
-                        trailingContent = {
-                            if (isCurrentFavorite) {
+                        var menuExpanded by remember { mutableStateOf(false) }
+
+                        Card(
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) {
+                                    MaterialTheme.colorScheme.primaryContainer
+                                } else {
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                }
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 64.dp)
+                                .zIndex(if (isDragging) 2f else 0f)
+                                .graphicsLayer {
+                                    if (isDragging) {
+                                        translationY = dragOffsetY
+                                    }
+                                }
+                                .scale(scale)
+                                .then(if (isDragging) Modifier else Modifier.animateItem())
+                                .clickable {
+                                    if (draggingIndex == null) {
+                                        onStationSelect(item.frequency)
+                                        onDismissRequest()
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 64.dp)
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Filled.Star,
-                                    contentDescription = "Favorited",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp)
+                                    imageVector = Icons.Outlined.DragHandle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .pointerInput(Unit) {
+                                            detectDragGesturesAfterLongPress(
+                                                onDragStart = {
+                                                    draggingIndex = index
+                                                    dragOffsetY = 0f
+                                                },
+                                                onDrag = { change, dragAmount ->
+                                                    change.consume()
+                                                    dragOffsetY += dragAmount.y
+                                                    val offsetItem = (dragOffsetY / itemHeightPx).toInt()
+                                                    val targetIndex = (index + offsetItem).coerceIn(0, orderedFavorites.size - 1)
+                                                    if (targetIndex != index) {
+                                                        val moving = orderedFavorites.removeAt(index)
+                                                        orderedFavorites.add(targetIndex, moving)
+                                                        draggingIndex = targetIndex
+                                                        dragOffsetY = 0f
+                                                    }
+                                                },
+                                                onDragEnd = {
+                                                    draggingIndex = null
+                                                    dragOffsetY = 0f
+                                                    FmPreferences.setFavoritesOrder(
+                                                        context,
+                                                        orderedFavorites.map { it.frequency }
+                                                    )
+                                                    onReloadFavorites()
+                                                },
+                                                onDragCancel = {
+                                                    draggingIndex = null
+                                                    dragOffsetY = 0f
+                                                }
+                                            )
+                                        }
                                 )
-                            } else {
-                                FilledTonalButton(
-                                    onClick = {
-                                        FmStation.addToFavorite(context, currentFreqInt)
-                                        onReloadFavorites()
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Add,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
+
+                                Spacer(modifier = Modifier.width(16.dp))
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = item.name,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurface
+                                        },
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(text = "Favorite", style = MaterialTheme.typography.labelSmall)
+                                    Text(
+                                        text = FmUtils.formatStation(item.frequency),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = if (isSelected) {
+                                            MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
+
+                                Box {
+                                    IconButton(onClick = { menuExpanded = true }) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.MoreVert,
+                                            contentDescription = null,
+                                            tint = if (isSelected) {
+                                                MaterialTheme.colorScheme.onPrimaryContainer
+                                            } else {
+                                                MaterialTheme.colorScheme.onSurfaceVariant
+                                            }
+                                        )
+                                    }
+
+                                    DropdownMenu(
+                                        expanded = menuExpanded,
+                                        onDismissRequest = { menuExpanded = false }
+                                    ) {
+                                        DropdownMenuItem(
+                                            text = { Text("Edit Name") },
+                                            onClick = {
+                                                menuExpanded = false
+                                                stationToEdit = item
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Edit,
+                                                    contentDescription = null
+                                                )
+                                            }
+                                        )
+                                        DropdownMenuItem(
+                                            text = { Text("Delete") },
+                                            onClick = {
+                                                menuExpanded = false
+                                                stationToDelete = item
+                                            },
+                                            leadingIcon = {
+                                                Icon(
+                                                    imageVector = Icons.Outlined.Delete,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                    )
-                }
-
-                // Category 2: Saved Favorites
-                item(key = "header_favorites") {
-                    Text(
-                        text = "FAVORITE STATIONS",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            letterSpacing = 1.2.sp
-                        ),
-                        modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp)
-                    )
-                }
-
-                if (favoritesList.isEmpty()) {
-                    item(key = "empty_favorites") {
-                        SegmentedListItem(
-                            onClick = {},
-                            shapes = ListItemDefaults.segmentedShapes(0, 1),
-                            modifier = Modifier.fillMaxWidth(),
-                            content = {
-                                Text(
-                                    text = stringResource(R.string.no_favorite_station),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        )
-                    }
-                } else {
-                    itemsIndexed(favoritesList, key = { _, item -> item.frequency }) { index, item ->
-                        val isCurrent = item.frequency == currentFreqInt
-                        val stationDisplayName = if (item.name.isNotBlank()) item.name else String.format(Locale.US, "%.1f FM", item.frequency / 10f)
-
-                        SegmentedListItem(
-                            selected = isCurrent,
-                            onClick = { onStationSelect(item.frequency) },
-                            shapes = ListItemDefaults.segmentedShapes(index = index, count = favoritesList.size),
-                            modifier = Modifier.fillMaxWidth(),
-                            leadingContent = {
-                                Icon(
-                                    imageVector = if (isCurrent) Icons.AutoMirrored.Filled.VolumeUp else Icons.Filled.Radio,
-                                    contentDescription = null,
-                                    tint = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            },
-                            content = {
-                                Text(
-                                    text = stationDisplayName,
-                                    style = MaterialTheme.typography.bodyLarge.copy(
-                                        fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium
-                                    ),
-                                    color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            supportingContent = {
-                                Text(
-                                    text = String.format(Locale.US, "%.1f MHz", item.frequency / 10f),
-                                    style = MaterialTheme.typography.labelMedium,
-                                    color = if (isCurrent) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.75f) else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            trailingContent = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    // Move Up Button
-                                    IconButton(
-                                        onClick = {
-                                            if (index > 0) {
-                                                val mutable = favoritesList.map { it.frequency }.toMutableList()
-                                                val temp = mutable[index]
-                                                mutable[index] = mutable[index - 1]
-                                                mutable[index - 1] = temp
-                                                FmPreferences.setFavoritesOrder(context, mutable)
-                                                onReloadFavorites()
-                                            }
-                                        },
-                                        enabled = index > 0,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.ArrowUpward,
-                                            contentDescription = "Move Up",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = if (index > 0) MaterialTheme.colorScheme.onSurfaceVariant else Color.Transparent
-                                        )
-                                    }
-
-                                    // Move Down Button
-                                    IconButton(
-                                        onClick = {
-                                            if (index < favoritesList.size - 1) {
-                                                val mutable = favoritesList.map { it.frequency }.toMutableList()
-                                                val temp = mutable[index]
-                                                mutable[index] = mutable[index + 1]
-                                                mutable[index + 1] = temp
-                                                FmPreferences.setFavoritesOrder(context, mutable)
-                                                onReloadFavorites()
-                                            }
-                                        },
-                                        enabled = index < favoritesList.size - 1,
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.ArrowDownward,
-                                            contentDescription = "Move Down",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = if (index < favoritesList.size - 1) MaterialTheme.colorScheme.onSurfaceVariant else Color.Transparent
-                                        )
-                                    }
-
-                                    // Rename Button
-                                    IconButton(
-                                        onClick = { stationToRename = item },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Edit,
-                                            contentDescription = "Rename",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    // Delete Button
-                                    IconButton(
-                                        onClick = { stationToDelete = item },
-                                        modifier = Modifier.size(32.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.DeleteOutline,
-                                            contentDescription = "Remove",
-                                            modifier = Modifier.size(16.dp),
-                                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.85f)
-                                        )
-                                    }
-                                }
-                            }
-                        )
                     }
                 }
             }
         }
     }
 
-    // Rename Dialog
-    if (stationToRename != null) {
-        val item = stationToRename!!
-        var newName by remember { mutableStateOf(item.name) }
+    // Edit Station Name Dialog
+    stationToEdit?.let { station ->
+        var editedName by remember { mutableStateOf(station.name) }
         AlertDialog(
-            onDismissRequest = { stationToRename = null },
-            title = { Text(text = "Rename station", fontWeight = FontWeight.Bold) },
+            onDismissRequest = { stationToEdit = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Edit,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.edit_station_title),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
             text = {
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "Frequency: ${String.format(Locale.US, "%.1f MHz", item.frequency / 10f)}",
+                        text = "Frequency: ${FmUtils.formatStation(station.frequency)}",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    Spacer(modifier = Modifier.height(10.dp))
                     OutlinedTextField(
-                        value = newName,
-                        onValueChange = { newName = it },
-                        label = { Text("Station name") },
+                        value = editedName,
+                        onValueChange = { editedName = it },
+                        label = { Text("Name") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
             },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
-                        val trimmed = newName.trim()
-                        FmStation.updateStationToDb(context, item.frequency, trimmed)
-                        onReloadFavorites()
-                        stationToRename = null
+                        val trimmed = editedName.trim()
+                        if (trimmed.isNotEmpty()) {
+                            FmStation.updateStationToDb(
+                                context,
+                                station.frequency,
+                                trimmed
+                            )
+                            onReloadFavorites()
+                        }
+                        stationToEdit = null
                     }
                 ) {
-                    Text("Save")
+                    Text(stringResource(android.R.string.ok))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { stationToRename = null }) {
+                TextButton(onClick = { stationToEdit = null }) {
                     Text(stringResource(android.R.string.cancel))
                 }
-            }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 
-    // Delete Confirmation Dialog
-    if (stationToDelete != null) {
-        val item = stationToDelete!!
+    // Delete Station Dialog
+    stationToDelete?.let { station ->
         AlertDialog(
             onDismissRequest = { stationToDelete = null },
-            title = { Text(text = "Remove from favorites?", fontWeight = FontWeight.Bold) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Outlined.Delete,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(24.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = stringResource(R.string.delete_favorite_title),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+            },
             text = {
-                Text(text = "Remove \"${item.name}\" (${String.format(Locale.US, "%.1f MHz", item.frequency / 10f)}) from your favorite stations?")
+                Text(
+                    text = stringResource(
+                        R.string.delete_favorite_message,
+                        station.name,
+                        FmUtils.formatStation(station.frequency)
+                    ),
+                    style = MaterialTheme.typography.bodyMedium
+                )
             },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = {
-                        FmStation.removeFromFavorite(context, item.frequency)
-                        val order = FmPreferences.getFavoritesOrder(context).toMutableList()
-                        order.remove(item.frequency)
-                        FmPreferences.setFavoritesOrder(context, order)
+                        FmStation.removeFromFavorite(context, station.frequency)
+                        val updatedOrder = orderedFavorites
+                            .filter { it.frequency != station.frequency }
+                            .map { it.frequency }
+                        FmPreferences.setFavoritesOrder(context, updatedOrder)
                         onReloadFavorites()
                         stationToDelete = null
-                    },
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    )
+                    }
                 ) {
-                    Text("Remove")
+                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { stationToDelete = null }) {
                     Text(stringResource(android.R.string.cancel))
                 }
-            }
-        )
-    }
-
-    // Add Custom Station Dialog
-    if (showAddDialog) {
-        var freqInput by remember { mutableStateOf(String.format(Locale.US, "%.1f", currentFrequency)) }
-        var nameInput by remember { mutableStateOf("") }
-        var isError by remember { mutableStateOf(false) }
-
-        AlertDialog(
-            onDismissRequest = { showAddDialog = false },
-            title = { Text(text = "Add favorite station", fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    OutlinedTextField(
-                        value = freqInput,
-                        onValueChange = {
-                            freqInput = it
-                            isError = false
-                        },
-                        label = { Text("Frequency (87.5 - 108.0 MHz)") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                        singleLine = true,
-                        isError = isError,
-                        supportingText = if (isError) {
-                            { Text("Enter a frequency between 87.5 and 108.0") }
-                        } else null,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        label = { Text("Station name (optional)") },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val parsedFreq = freqInput.trim().toFloatOrNull()
-                        if (parsedFreq == null || parsedFreq < 87.5f || parsedFreq > 108.0f) {
-                            isError = true
-                        } else {
-                            val freqInt = (parsedFreq * 10f).roundToInt()
-                            FmStation.addToFavorite(context, freqInt)
-                            val trimmedName = nameInput.trim()
-                            if (trimmedName.isNotEmpty()) {
-                                FmStation.updateStationToDb(context, freqInt, trimmedName)
-                            }
-                            val order = FmPreferences.getFavoritesOrder(context).toMutableList()
-                            if (!order.contains(freqInt)) {
-                                order.add(freqInt)
-                                FmPreferences.setFavoritesOrder(context, order)
-                            }
-                            onReloadFavorites()
-                            showAddDialog = false
-                        }
-                    }
-                ) {
-                    Text("Add")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showAddDialog = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            }
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
         )
     }
 }
