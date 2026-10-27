@@ -40,6 +40,7 @@ import android.graphics.Bitmap;
 import com.android.fmradio.ui.artwork.StationArtworkGenerator;
 import android.media.AudioAttributes;
 import android.media.AudioDeviceAttributes;
+import android.media.AudioDeviceCallback;
 import android.media.AudioDeviceInfo;
 import android.media.AudioDevicePort;
 import android.media.AudioDevicePortConfig;
@@ -177,6 +178,9 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
     private boolean mIsStopScanCalled = false;
     // Record whether is speaker used
     private boolean mIsSpeakerUsed = true;
+    // User manual toggle override for speaker
+    private boolean mManualSpeakerOverride = false;
+    private AudioDeviceCallback mAudioDeviceCallback = null;
     // Record whether device is open
     private boolean mIsDeviceOpen = false;
     // Record Power Status
@@ -325,7 +329,10 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                     return;
                 }
 
-                mIsSpeakerUsed = !isHeadSetIn();
+                final boolean headSetIn = isHeadSetIn();
+                mManualSpeakerOverride = false;
+                mIsSpeakerUsed = !headSetIn;
+                setForceUse(mIsSpeakerUsed, /*keepPreferredDeviceForMediaStrategy*/ false);
 
                 // Avoid Service is killed,and receive headset plug in
                 // broadcast again
@@ -338,7 +345,7 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                  * If ear phone insert and activity is
                  * foreground. power up FM automatic
                  */
-                if (isHeadSetIn() && isActivityForeground() &&
+                if (headSetIn && isActivityForeground() &&
                         mIsRecordingPermissible) {
                     powerUpAsync(FmUtils.computeFrequency(mCurrentStation));
                 }
@@ -347,7 +354,7 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                 Bundle bundle = new Bundle(2);
                 bundle.putInt(FmListener.CALLBACK_FLAG,
                         FmListener.LISTEN_SPEAKER_MODE_CHANGED);
-                bundle.putBoolean(FmListener.KEY_IS_SPEAKER_MODE, !isHeadSetIn());
+                bundle.putBoolean(FmListener.KEY_IS_SPEAKER_MODE, mIsSpeakerUsed);
                 notifyActivityStateChanged(bundle);
 
                 switchAntennaAsync(mValueHeadSetPlug);
@@ -455,6 +462,7 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
      */
     public void setSpeakerPhoneOn(boolean isSpeaker) {
         Log.d(TAG, "setSpeakerPhoneOn " + isSpeaker);
+        mManualSpeakerOverride = isSpeaker;
         setForceUse(isSpeaker, /*keepPreferredDeviceForMediaStrategy*/ false);
     }
 
@@ -566,6 +574,44 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         for (final AudioDeviceInfo audioDeviceInfo : deviceList) {
             if (deviceType == audioDeviceInfo.getType()) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isHeadphoneDevice(AudioDeviceInfo device) {
+        if (device == null || !device.isSink()) {
+            return false;
+        }
+        int type = device.getType();
+        return type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+                || type == AudioDeviceInfo.TYPE_WIRED_HEADSET
+                || type == AudioDeviceInfo.TYPE_USB_HEADSET
+                || type == AudioDeviceInfo.TYPE_USB_DEVICE
+                || type == AudioDeviceInfo.TYPE_BLE_HEADSET
+                || type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP
+                || type == AudioDeviceInfo.TYPE_HEARING_AID;
+    }
+
+    private boolean isWiredHeadphone(AudioDeviceInfo device) {
+        if (device == null) {
+            return false;
+        }
+        int type = device.getType();
+        return type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
+                || type == AudioDeviceInfo.TYPE_WIRED_HEADSET;
+    }
+
+    public boolean hasHeadphonesConnected() {
+        if (isHeadSetIn()) {
+            return true;
+        }
+        if (mAudioManager != null) {
+            AudioDeviceInfo[] devices = mAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
+            for (AudioDeviceInfo device : devices) {
+                if (isHeadphoneDevice(device)) {
+                    return true;
+                }
             }
         }
         return false;
@@ -1487,9 +1533,7 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         final AudioDeviceInfo[] deviceList =
             mAudioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS);
         for (final AudioDeviceInfo audioDeviceInfo : deviceList) {
-            final int deviceType = audioDeviceInfo.getType();
-            if (deviceType == AudioDeviceInfo.TYPE_WIRED_HEADPHONES
-                    || deviceType == AudioDeviceInfo.TYPE_WIRED_HEADSET) {
+            if (isHeadphoneDevice(audioDeviceInfo)) {
                 mIsSpeakerUsed = false;
                 break;
             }
@@ -1522,6 +1566,53 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
         HandlerThread handlerThread = new HandlerThread("FmRadioServiceThread");
         handlerThread.start();
         mFmServiceHandler = new FmRadioServiceHandler(handlerThread.getLooper());
+
+        mAudioDeviceCallback = new AudioDeviceCallback() {
+            @Override
+            public void onAudioDevicesAdded(AudioDeviceInfo[] addedDevices) {
+                boolean headphoneConnected = false;
+                boolean nonWiredHeadphone = false;
+                for (AudioDeviceInfo device : addedDevices) {
+                    if (isHeadphoneDevice(device)) {
+                        headphoneConnected = true;
+                        if (!isWiredHeadphone(device)) {
+                            nonWiredHeadphone = true;
+                        }
+                    }
+                }
+                if (headphoneConnected) {
+                    Log.d(TAG, "Headphones/headset connected via AudioDeviceCallback");
+                    mManualSpeakerOverride = false;
+                    if (nonWiredHeadphone && !mUseAudioSession) {
+                        forceAudioSession(true);
+                    }
+                    mIsSpeakerUsed = false;
+                    setForceUse(false, false);
+                    Bundle bundle = new Bundle(2);
+                    bundle.putInt(FmListener.CALLBACK_FLAG, FmListener.LISTEN_SPEAKER_MODE_CHANGED);
+                    bundle.putBoolean(FmListener.KEY_IS_SPEAKER_MODE, false);
+                    notifyActivityStateChanged(bundle);
+                }
+            }
+
+            @Override
+            public void onAudioDevicesRemoved(AudioDeviceInfo[] removedDevices) {
+                if (!hasHeadphonesConnected()) {
+                    Log.d(TAG, "All headphones disconnected via AudioDeviceCallback");
+                    mManualSpeakerOverride = false;
+                    if (!mUseAudioSession && mForceUseAudioSession) {
+                        forceAudioSession(false);
+                    }
+                    mIsSpeakerUsed = true;
+                    setForceUse(true, false);
+                    Bundle bundle = new Bundle(2);
+                    bundle.putInt(FmListener.CALLBACK_FLAG, FmListener.LISTEN_SPEAKER_MODE_CHANGED);
+                    bundle.putBoolean(FmListener.KEY_IS_SPEAKER_MODE, true);
+                    notifyActivityStateChanged(bundle);
+                }
+            }
+        };
+        mAudioManager.registerAudioDeviceCallback(mAudioDeviceCallback, mFmServiceHandler);
 
         if (mStrategyForMedia != null) {
             mAudioManager.addOnPreferredDevicesForStrategyChangedListener(
@@ -1590,6 +1681,10 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
 
     @Override
     public void onDestroy() {
+        if (mAudioDeviceCallback != null) {
+            mAudioManager.unregisterAudioDeviceCallback(mAudioDeviceCallback);
+            mAudioDeviceCallback = null;
+        }
         mAudioManager.setParameters("AudioFmPreStop=1");
         mAudioManager.removeOnPreferredDevicesForStrategyChangedListener(this);
         setMute(true);
@@ -2943,6 +3038,9 @@ public class FmService extends Service implements FmRecorder.OnRecorderStateChan
                         forceAudioSession(connected);
                     }
 
+                    if (connected) {
+                        mManualSpeakerOverride = false;
+                    }
                     final boolean forceSpeaker = !connected && !isHeadSetIn();
                     setForceUse(forceSpeaker);
 
