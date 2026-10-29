@@ -101,9 +101,10 @@ PRODUCT_PACKAGES += \
    ```
 
 3. **SELinux Policy** (`sepolicy/vendor/system_app.te`):
-   Allow `system_app` to read the vendor Bluetooth property:
+   Allow `system_app` to read the vendor Bluetooth property and access the FM HAL service (`fm_helium`):
    ```
    get_prop(system_app, vendor_bluetooth_prop)
+   hal_client_domain(system_app, vendor_hal_fm)
    ```
 
 ---
